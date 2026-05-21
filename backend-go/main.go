@@ -58,11 +58,10 @@ func main() {
 		ExposeHeaders:    "Set-Cookie",
 		AllowCredentials: true,
 	}))
-	// ──────────────────────────────────────────────────────────────────────
-
 	app.Use(logger.New())
 
 	routers.SetupRoutes(app)
+	routers.Websocket(app)
 
 	app.Get("/swagger/*", swagger.WrapHandler)
 
