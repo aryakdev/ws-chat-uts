@@ -1,9 +1,8 @@
-import 'dart:convert';
+// dart:convert removed; ApiClient handles encoding
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:mobile_flutter/services/api_client.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
 
-const _kBaseUrl   = 'http://localhost:8080';
 const _kBlue      = Color(0xFF2C6BED);
 const _kBlueDark  = Color(0xFF1A56D6);
 const _kBubbleB   = Color(0xFFAEC6F6);
@@ -50,16 +49,16 @@ class _RegisterPageState extends State<RegisterPage> {
 
     setState(() { _loading = true; _error = null; });
     try {
-      final res = await http.post(
-        Uri.parse('$_kBaseUrl/api/auth/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final res = await ApiClient().post(
+        '/api/auth/register',
+        data: {
           'username': _usernameCtrl.text.trim(),
-          'email':    _emailCtrl.text.trim(),
+          'email': _emailCtrl.text.trim(),
           'password': _passwordCtrl.text,
-        }),
+        },
       );
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
+
+      final data = res.data as Map<String, dynamic>;
       if (res.statusCode == 201) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -70,8 +69,7 @@ class _RegisterPageState extends State<RegisterPage> {
         );
         Navigator.pop(context);
       } else {
-        setState(() =>
-            _error = data['Message'] ?? data['message'] ?? 'Pendaftaran gagal');
+        setState(() => _error = data['Message'] ?? data['message'] ?? 'Pendaftaran gagal');
       }
     } catch (e) {
       setState(() => _error = 'Terjadi Kesalahan Koneksi.');

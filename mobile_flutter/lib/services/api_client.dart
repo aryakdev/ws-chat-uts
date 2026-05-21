@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
 
@@ -29,6 +28,10 @@ class ApiClient {
         baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 15),
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
       ),
     );
 
@@ -39,6 +42,40 @@ class ApiClient {
         receiveTimeout: const Duration(seconds: 15),
       ),
     );
+  }
+
+  // Convenience helpers to centralize common request patterns
+  Future<Response> get(String path, {Map<String, dynamic>? queryParameters, Options? options}) async {
+    return dio.get(path, queryParameters: queryParameters, options: options);
+  }
+
+  Future<Response> post(String path, {dynamic data, Options? options}) async {
+    return dio.post(path, data: data, options: options);
+  }
+
+  Future<Response> put(String path, {dynamic data, Options? options}) async {
+    return dio.put(path, data: data, options: options);
+  }
+
+  Future<Response> delete(String path, {dynamic data, Options? options}) async {
+    return dio.delete(path, data: data, options: options);
+  }
+
+  // Build absolute URL for diagnostics or legacy code that needs it
+  String buildUrl(String path) => '${baseUrl.replaceAll(RegExp(r'\/ ? ? ?'), '')}${path.startsWith('/') ? path : '/$path'}';
+
+  // Return headers including authorization when available. Useful for non-dio callers.
+  Future<Map<String, String>> authorizedHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final accessToken = prefs.getString(_accessTokenKey);
+    final headers = <String, String>{
+      'accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+    if (accessToken != null && accessToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $accessToken';
+    }
+    return headers;
   }
 
   Future<void> init() async {

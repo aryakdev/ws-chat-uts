@@ -5,22 +5,9 @@ import (
 	"backend-go/middleware"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/websocket/v2"
 )
 
 func SetupRoutes(app *fiber.App) {
-
-	// --- SETUP WEBSOCKET ---
-	app.Use("/ws", func(c *fiber.Ctx) error {
-		if websocket.IsWebSocketUpgrade(c) {
-			return c.Next()
-		}
-		return fiber.ErrUpgradeRequired
-	})
-
-	// --- RUTE UPDATE PROFILE (Level Utama) ---
-	// Agar sinkron dengan Flutter: http://localhost:8080/patch/update/:id
-
 	// --- GRUP API ---
 	api := app.Group("/api")
 

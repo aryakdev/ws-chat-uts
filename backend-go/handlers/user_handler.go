@@ -16,6 +16,7 @@ import (
 // @Tags         Users
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Success      200  {object}  map[string]interface{} "Success response"
 // @Failure      500  {object}  model.ErrorResponse
 // @Router       /users [get]

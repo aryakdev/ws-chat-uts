@@ -394,6 +394,11 @@ const docTemplate = `{
         },
         "/users": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Mengambil daftar semua user (tanpa detail)",
                 "consumes": [
                     "application/json"

@@ -1,4 +1,4 @@
-import 'dart:convert';
+// import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +16,6 @@ import 'package:mobile_flutter/theme/theme_controller.dart';
 import 'package:mobile_flutter/services/api_client.dart';
 import 'package:mobile_flutter/services/chat_service.dart';
 import 'package:mobile_flutter/presentation/widgets/empty_chat_view.dart';
-import 'package:http/http.dart' as http;
 
 const _kBlue = Color(0xFF2C6BED);
 const _kDarkBg = Color(0xFF121212);
@@ -39,41 +38,28 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
    List<ChatModel> _chats = [];
   
    Future<void> fetchUsers() async {
+    try {
+      final response = await ApiClient().get('/api/users');
+      if (response.statusCode == 200) {
+        final json = response.data;
+        final List users = json['data'];
 
-    final token = await ApiClient().getAccessToken();
-    
-    final response = await http.get(
+        setState(() {
+          _chats = users.map<ChatModel>((user) {
+            return ChatModel(
+              id: user['id'].toString(),
+              name: user['username'],
+              lastMessage: '',
+              time: '',
+            );
+          }).toList();
+        });
 
-    Uri.parse('http://localhost:8080/api/users'),
-    headers: {
-      'Authorization': 'Bearer $token',
-      'accept': 'application/json',
-    },
-  );
-  
-  // print("STATUS CODE : ${response.statusCode}");
-  // print("BODY RESPONSE : ${response.body}");
-  if (response.statusCode == 200) {
-
-    final json = jsonDecode(response.body);
-
-    final List users = json['data'];
-    // print(json);
-    // print(json['data']);
-
-    setState(() {
-      _chats = users.map<ChatModel>((user) {
-        return ChatModel(
-          id: user['id'].toString(),
-          name: user['username'],
-          lastMessage: '',
-          time: '',
-        );
-      }).toList();
-    });
-
-    print("TOTAL CHATS : ${_chats.length}");
-  }
+        print("TOTAL CHATS : ${_chats.length}");
+      }
+    } catch (e) {
+      debugPrint('fetchUsers error: $e');
+    }
 }
 
   @override
@@ -146,7 +132,6 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
     }
 
     final roomId = await ChatService().createPrivateService(
-      token: accessToken,
       targetUserId: chat.id,
     );
 
