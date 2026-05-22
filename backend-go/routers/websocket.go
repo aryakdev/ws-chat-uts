@@ -3,6 +3,8 @@ package routers
 import (
 	"backend-go/handlers"
 
+	"backend-go/middleware"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 )
@@ -16,5 +18,5 @@ func Websocket(app *fiber.App) {
 		return fiber.ErrUpgradeRequired
 	})
 
-	app.Get("/ws", websocket.New(handlers.HandleWebSocket))
+	app.Get("/ws", middleware.AuthMiddleware, websocket.New(handlers.HandleWebSocket))
 }

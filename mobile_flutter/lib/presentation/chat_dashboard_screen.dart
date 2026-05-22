@@ -34,6 +34,10 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
   ChatModel? selectedChat;
   WebSocketChannel? _channel;
   String? selectedRoomId;
+
+  void _sendTestMessage() {
+  _channel?.sink.add("halo dari flutter");
+}
    
    List<ChatModel> _chats = [];
   
@@ -70,6 +74,10 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
 
       fetchUsers();
       _initWS();
+      
+      Future.delayed(const Duration(seconds: 2), () {
+        _sendTestMessage();
+      });
     }
 
   void _initWS() async {

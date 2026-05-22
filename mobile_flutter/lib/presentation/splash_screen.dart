@@ -21,21 +21,23 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _bootstrapSession() async {
+    final profileProv = context.read<ProfileProvider>();
+
     await Future.delayed(const Duration(seconds: 2));
 
     final token = await ApiClient().getAccessToken();
     final hasToken = token != null && token.isNotEmpty;
 
-    final profileProv = context.read<ProfileProvider>();
-    if (hasToken) {
-    await profileProv.initLocalData();
-
-    if (!context.mounted) return;
-
-    await profileProv.fetchProfile();
-  }
-
     if (!mounted) return;
+
+    if (hasToken) {
+      await profileProv.initLocalData();
+      
+      if (!mounted) return;
+      await profileProv.fetchProfile();
+    }
+    
+        if (!mounted) return;
 
     Navigator.pushReplacement(
       context,

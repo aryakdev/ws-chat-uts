@@ -13,14 +13,12 @@ import (
 )
 
 func LoadEnv() {
-	// Membaca file .env
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Warning: .env file not found, using environment variables")
 	}
 }
 
-// Fungsi untuk ambil value biar rapi
 func GetEnv(key string) string {
 	return os.Getenv(key)
 }
@@ -42,7 +40,8 @@ func ConnectDatabase() {
 	newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),
 		logger.Config{
-			LogLevel: logger.Info,
+
+			LogLevel: logger.Error,
 		},
 	)
 
@@ -58,12 +57,20 @@ func ConnectDatabase() {
 	fmt.Println("DB_HOST:", host)
 	fmt.Println("DB_PORT:", port)
 
-	database.AutoMigrate(
+	DB = database
+
+	fmt.Println("Menjalankan Auto-Migration...")
+	err = DB.AutoMigrate(
 		&model.User{},
 		&model.Profile{},
 		&model.ChatRoom{},
 		&model.ChatMember{},
-	)
+		&model.Message{},
+		&model.MessageRead{})
 
-	DB = database
+	if err != nil {
+		log.Fatal("Gagal melakukan Auto-Migration: ", err)
+	}
+
+	fmt.Println("Auto-Migration berhasil dan database siap digunakan!")
 }
