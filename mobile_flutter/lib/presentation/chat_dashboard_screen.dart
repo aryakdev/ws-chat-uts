@@ -2,19 +2,14 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // Untuk kIsWeb
-import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:web_socket_channel/io.dart'; // Untuk Native
-import 'dart:io' show Platform; // Untuk cek OS
 
+import 'package:mobile_flutter/controllers/chat_dashboard_controllers.dart';
 import 'package:mobile_flutter/model/chat_user.dart';
 import 'package:mobile_flutter/presentation/settings/setting_page.dart';
 import 'package:mobile_flutter/presentation/widgets/chat_detail.dart';
 import 'package:mobile_flutter/presentation/widgets/chat_list.dart';
 import 'package:mobile_flutter/presentation/widgets/navbar.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
-import 'package:mobile_flutter/services/api_client.dart';
-import 'package:mobile_flutter/services/chat_service.dart';
 import 'package:mobile_flutter/presentation/widgets/empty_chat_view.dart';
 
 const _kBlue = Color(0xFF2C6BED);
@@ -31,100 +26,35 @@ class ChatDashboardScreen extends StatefulWidget {
 
 class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
   int _selectedIndex = 0;
-  ChatModel? selectedChat;
-  WebSocketChannel? _channel;
-  String? selectedRoomId;
-
-  void _sendTestMessage() {
-  _channel?.sink.add("halo dari flutter");
-}
-   
-   List<ChatModel> _chats = [];
-  
-   Future<void> fetchUsers() async {
-    try {
-      final response = await ApiClient().get('/api/users');
-      if (response.statusCode == 200) {
-        final json = response.data;
-        final List users = json['data'];
-
-        setState(() {
-          _chats = users.map<ChatModel>((user) {
-            return ChatModel(
-              id: user['id'].toString(),
-              name: user['username'],
-              lastMessage: '',
-              time: '',
-            );
-          }).toList();
-        });
-
-        print("TOTAL CHATS : ${_chats.length}");
-      }
-    } catch (e) {
-      debugPrint('fetchUsers error: $e');
-    }
-}
+  final ChatDashboardController _controller = ChatDashboardController();
 
   @override
-    void initState() {
-      super.initState();
+  void initState() {
+    super.initState();
 
-      print("INIT STATE JALAN");
+    print("INIT STATE JALAN");
 
-      fetchUsers();
-      _initWS();
-      
-      Future.delayed(const Duration(seconds: 2), () {
-        _sendTestMessage();
-      });
-    }
+    _initialize();
+  }
 
-  void _initWS() async {
-    try {
-      
-      String ipAddress = "127.0.0.1";
-      if (kIsWeb) {
-        ipAddress = "localhost";
-      } else if (Platform.isAndroid) {
-        ipAddress = "10.0.2.2";
-      }
-      
-      final wsUrl = Uri.parse("ws://$ipAddress:8080/ws");
-      final accessToken = await ApiClient().getAccessToken();
-
-      if (kIsWeb) {
-        _channel = WebSocketChannel.connect(wsUrl);
-      } else {
-        _channel = IOWebSocketChannel.connect(
-          wsUrl,
-          headers: {
-            if (accessToken != null && accessToken.isNotEmpty)
-              'Authorization': 'Bearer $accessToken',
-          },
-        );
-      }
-
-      _channel?.stream.listen(
-        (message) => debugPrint("Pesan masuk WS: $message"),
-        onError: (error) => debugPrint("Error WS: $error"),
-        onDone: () => debugPrint("Koneksi WS putus."),
-      );
-    } catch (e) {
-      debugPrint("Gagal WS: $e");
-    }
+  Future<void> _initialize() async {
+    await _controller.init();
+    if (!mounted) return;
+    setState(() {});
   }
 
   @override
   void dispose() {
-    _channel?.sink.close();
+    _controller.dispose();
     super.dispose();
   }
 
   void _onNavTap(int index) {
     setState(() {
       _selectedIndex = index;
-      if (index != 0) selectedChat = null;
+      if (index != 0) {
+        _controller.clearSelectedChat();
+      }
     });
   }
 
@@ -134,14 +64,10 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
   }
 
   Future<void> _onChatSelected(ChatModel chat) async {
-    final accessToken = await ApiClient().getAccessToken();
-    if (accessToken == null || accessToken.isEmpty) {
+    final roomId = await _controller.openRoom(chat);
+    if (roomId == null) {
       return;
     }
-
-    final roomId = await ChatService().createPrivateService(
-      targetUserId: chat.id,
-    );
 
     if (!mounted) return;
     final isMobile = MediaQuery.of(context).size.width < 600;
@@ -149,7 +75,7 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
       await Navigator.push(
         context,
         MaterialPageRoute(
-         builder: (_) => ChatDetailView(
+          builder: (_) => ChatDetailView(
             isDark: ThemeController.isDark,
             selectedChat: chat,
             roomId: roomId,
@@ -157,10 +83,7 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
         ),
       );
     } else {
-      setState(() {
-        selectedChat = chat;
-        selectedRoomId = roomId;
-      });
+      setState(() {});
     }
   }
 
@@ -204,24 +127,24 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
                       flex: 2,
                       child: ChatListView(
                         isDark: isDark,
-                        chats: _chats,
-                        selectedChat: selectedChat,
+                        chats: _controller.chats,
+                        selectedChat: _controller.selectedChat,
                         onChatSelected: _onChatSelected,
                       ),
                     ),
                     Expanded(
                       flex: 5,
-                      child: selectedChat != null && selectedRoomId != null
+                      child: _controller.selectedChat != null && _controller.selectedRoomId != null
                           ? ChatDetailView(
                               isDark: isDark,
-                              selectedChat: selectedChat,
-                              roomId: selectedRoomId!,
+                              selectedChat: _controller.selectedChat,
+                              roomId: _controller.selectedRoomId!,
                             )
                           : EmptyChatView(isDark: isDark),
                     ),
                   ],
                 )
-              : _CallsView(isDark: isDark), 
+              : _CallsView(isDark: isDark),
         ),
       ],
     );
@@ -231,8 +154,8 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
     if (_selectedIndex == 1) return _CallsView(isDark: isDark);
     return ChatListView(
       isDark: isDark,
-      chats: _chats,
-      selectedChat: selectedChat,
+      chats: _controller.chats,
+      selectedChat: _controller.selectedChat,
       onChatSelected: _onChatSelected,
     );
   }
@@ -258,36 +181,30 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
       title: Text('Signal', style: TextStyle(fontWeight: FontWeight.w800, color: titleColor, fontSize: 20)),
       actions: [
         IconButton(onPressed: () {}, icon: const Icon(CupertinoIcons.camera, color: _kBlue, size: 22)),
-        IconButton(onPressed: () {}, icon: const Icon(CupertinoIcons.pencil_circle_fill, color: _kBlue, size: 24)),
-        const SizedBox(width: 4),
+        IconButton(onPressed: () {}, icon: const Icon(CupertinoIcons.pencil, color: _kBlue, size: 20)),
       ],
     );
   }
 
   Widget _buildMobileBottomNavigation(bool isDark) {
     final navBg = isDark ? _kDarkSurface : Colors.white;
-    final unselColor = isDark ? Colors.white54 : Colors.grey;
-
+    
     return BottomNavigationBar(
-      currentIndex: _selectedIndex,
-      onTap: (index) {
-        if (index == 2) {
-          _openSettings();
-          return;
-        }
-        _onNavTap(index);
-      },
       backgroundColor: navBg,
+      currentIndex: _selectedIndex,
+      onTap: _onNavTap,
       selectedItemColor: _kBlue,
-      unselectedItemColor: unselColor,
-      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
-      unselectedLabelStyle: const TextStyle(fontSize: 11),
-      elevation: 0,
+      unselectedItemColor: isDark ? Colors.white38 : Colors.grey,
       type: BottomNavigationBarType.fixed,
       items: const [
-        BottomNavigationBarItem(icon: Icon(CupertinoIcons.chat_bubble), activeIcon: Icon(CupertinoIcons.chat_bubble_fill), label: 'Chats'),
-        BottomNavigationBarItem(icon: Icon(CupertinoIcons.phone), activeIcon: Icon(CupertinoIcons.phone_fill), label: 'Calls'),
-        BottomNavigationBarItem(icon: Icon(CupertinoIcons.settings), activeIcon: Icon(CupertinoIcons.settings_solid), label: 'Settings'),
+        BottomNavigationBarItem(
+          icon: Icon(CupertinoIcons.chat_bubble_2_fill),
+          label: 'Chats',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(CupertinoIcons.phone_fill),
+          label: 'Calls',
+        ),
       ],
     );
   }

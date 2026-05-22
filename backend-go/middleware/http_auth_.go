@@ -9,7 +9,7 @@ import (
 	"backend-go/config"
 )
 
-func AuthMiddleware(c *fiber.Ctx) error {
+func HttpMiddleware(c *fiber.Ctx) error {
 
 	if c.Method() == "OPTIONS" {
 		return c.Next()

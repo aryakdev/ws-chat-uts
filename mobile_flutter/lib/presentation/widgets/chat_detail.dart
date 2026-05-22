@@ -19,49 +19,72 @@ class ChatDetailView extends StatelessWidget {
   static const _kDarkSurface = Color(0xFF1E1E1E);
 
   Widget _buildInputBar() {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: isDark ? _kDarkSurface : Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: isDark ? Colors.white12 : const Color(0xFFEFEFEF),
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(
+      color: isDark ? _kDarkSurface : Colors.white,
+      border: Border(
+        top: BorderSide(
+          color: isDark ? Colors.white12 : const Color(0xFFEFEFEF),
+        ),
+      ),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: "Message",
+              hintStyle: TextStyle(
+                color: isDark ? Colors.white30 : Colors.grey,
+                fontSize: 15,
+              ),
+       
+              filled: true,
+              fillColor: isDark 
+                  ? const Color(0xFF2A2A2A) 
+                  : const Color(0xFFF4F4F4),
+              
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+
+              prefixIcon: Row(
+                mainAxisSize: MainAxisSize.min, // 
+                children: [
+                  const SizedBox(width: 8), 
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(CupertinoIcons.smiley),
+                    iconSize: 22,
+                  ),
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(CupertinoIcons.camera), 
+                    iconSize: 22,
+                  ),
+                ],
+              ),
+
+
+              // 2. Tombol Add (Di dalam input bar sebelah kanan)
+              suffixIcon: IconButton(
+                onPressed: () {
+                  print("Add attachment clicked");
+                },
+                icon: const Icon(CupertinoIcons.add),
+                iconSize: 22,
+                color: isDark ? Colors.white70 : Colors.black54,
+              ),
             ),
           ),
         ),
-        child: Row(
-          children: [
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(CupertinoIcons.smiley),
-            ),
-           
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF2A2A2A)
-                      : const Color(0xFFF4F4F4),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const TextField(
-                  decoration: InputDecoration(
-                    hintText: "Message",
-                    border: InputBorder.none,
-                  ),
-                ),
-              ),
-            ),
-            
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(CupertinoIcons.add),
-            ),
-          ],
-        ),
-      );
-    }
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {

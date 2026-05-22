@@ -9,36 +9,25 @@ class ChatService {
   Future<String> createPrivateService({
     required String targetUserId,
   }) async {
-
-    print(" [ChatService] POST /api/chat/private");
-    print(" target_user_id: $targetUserId");
-
     try {
       final response = await _dio.post(
         '/api/chat/private',
         data: {'target_user_id': targetUserId},
       );
 
-      print("📦 [ChatService] RAW RESPONSE:");
-      print(response.data);
-
       final roomId = response.data['room_id']?.toString();
 
       // tambahan penting untuk lihat flow backend
       final status = response.data['status'];
       if (status != null) {
-        print(" Room status: $status");
         // expected: "created" | "existing"
       } else {
-        print("⚠ No status field from backend");
       }
 
       if (roomId == null || roomId.isEmpty) {
-        print(" room_id is null/empty");
         throw Exception('room_id is missing from response');
       }
-
-      print(" ROOM READY → $roomId");
+   
 
       return roomId;
     } on DioException catch (e) {
