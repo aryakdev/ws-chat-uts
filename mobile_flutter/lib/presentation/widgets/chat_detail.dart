@@ -1,31 +1,40 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:mobile_flutter/model/chat_user.dart';
+import 'package:mobile_flutter/model/chat_user_model.dart';
 import 'package:mobile_flutter/presentation/widgets/empty_chat_view.dart';
+import 'package:mobile_flutter/controllers/chat_dashboard_controllers.dart';
 
-class ChatDetailView extends StatelessWidget {
-  const ChatDetailView({
+class ChatDetailView extends StatefulWidget {
+   const ChatDetailView({
     super.key,
     required this.isDark,
     required this.selectedChat,
-    required this.roomId
+    // required this.roomId,
+    required this.controller,
   });
 
   final bool isDark;
-  final ChatModel? selectedChat;
-  final String roomId;
-
+  final ChatRoomModel? selectedChat;
+  // final String roomId;
+  final ChatDashboardController controller;
   static const _kDarkBg = Color(0xFF121212);
   static const _kDarkSurface = Color(0xFF1E1E1E);
+
+  @override
+  State<ChatDetailView> createState() => _ChatDetailViewState();
+}
+
+class _ChatDetailViewState extends State<ChatDetailView> {
+  final TextEditingController messageController = TextEditingController();
 
   Widget _buildInputBar() {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     decoration: BoxDecoration(
-      color: isDark ? _kDarkSurface : Colors.white,
+      color: widget.isDark ? ChatDetailView._kDarkSurface : Colors.white,
       border: Border(
         top: BorderSide(
-          color: isDark ? Colors.white12 : const Color(0xFFEFEFEF),
+          color: widget.isDark ? Colors.white12 : const Color(0xFFEFEFEF),
         ),
       ),
     ),
@@ -33,15 +42,17 @@ class ChatDetailView extends StatelessWidget {
       children: [
         Expanded(
           child: TextField(
+            controller: messageController,
             decoration: InputDecoration(
+              
               hintText: "Message",
               hintStyle: TextStyle(
-                color: isDark ? Colors.white30 : Colors.grey,
+                color: widget.isDark ? Colors.white30 : Colors.grey,
                 fontSize: 15,
               ),
        
               filled: true,
-              fillColor: isDark 
+              fillColor: widget.isDark 
                   ? const Color(0xFF2A2A2A) 
                   : const Color(0xFFF4F4F4),
               
@@ -68,16 +79,44 @@ class ChatDetailView extends StatelessWidget {
                 ],
               ),
 
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () {
+                      final text = messageController.text.trim();
 
-              // 2. Tombol Add (Di dalam input bar sebelah kanan)
-              suffixIcon: IconButton(
-                onPressed: () {
-                  print("Add attachment clicked");
-                },
-                icon: const Icon(CupertinoIcons.add),
-                iconSize: 22,
-                color: isDark ? Colors.white70 : Colors.black54,
-              ),
+                      debugPrint("=== SEND BUTTON CLICKED ===");
+                      debugPrint("Text input: $text");
+
+                      if (text.isEmpty) {
+                        debugPrint("Text kosong, batal kirim");
+                        return;
+                      }
+
+                      debugPrint("Calling controller.sendMessage...");
+
+                      widget.controller.sendMessage(
+                        content: text,
+                      );
+
+                      debugPrint("Message sent to controller");
+
+                      messageController.clear();
+
+                      debugPrint("Input cleared");
+                      debugPrint("===========================");
+                    },
+                    icon: const Icon(CupertinoIcons.paperplane_fill),
+                    iconSize: 22,
+                  ),
+                  IconButton(onPressed: () {},
+                  icon: const Icon(CupertinoIcons.add),
+                  iconSize: 22,
+                  )
+                ],
+              )
             ),
           ),
         ),
@@ -88,10 +127,10 @@ class ChatDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = isDark ? _kDarkBg : const Color(0xFFF2F2F7);
-    final surfaceBg = isDark ? _kDarkSurface : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF1B1B1B);
-    final subColor = isDark ? Colors.white54 : Colors.grey;
+    final bg = widget.isDark ? ChatDetailView._kDarkBg : const Color(0xFFF2F2F7);
+    final surfaceBg = widget.isDark ? ChatDetailView._kDarkSurface : Colors.white;
+    final textColor = widget.isDark ? Colors.white : const Color(0xFF1B1B1B);
+    final subColor = widget.isDark ? Colors.white54 : Colors.grey;
 
     final isMobile = MediaQuery.of(context).size.width < 600;
 
@@ -99,8 +138,8 @@ class ChatDetailView extends StatelessWidget {
       backgroundColor: bg,
       body: Container(
         color: surfaceBg,
-        child: selectedChat == null
-            ? EmptyChatView(isDark: isDark)
+        child: widget.selectedChat == null
+            ? EmptyChatView(isDark: widget.isDark)
             : Column(
                 children: [
                   Container(
@@ -108,7 +147,7 @@ class ChatDetailView extends StatelessWidget {
                     decoration: BoxDecoration(
                       border: Border(
                         bottom: BorderSide(
-                          color: isDark ? Colors.white12 : const Color(0xFFEFEFEF),
+                          color: widget.isDark ? Colors.white12 : const Color(0xFFEFEFEF),
                         ),
                       ),
                     ),
@@ -123,7 +162,7 @@ class ChatDetailView extends StatelessWidget {
 
                         CircleAvatar(
                           radius: 22,
-                          child: Text(selectedChat!.name[0].toUpperCase()),
+                          child: Text(widget.selectedChat!.name[0].toUpperCase()),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -131,7 +170,7 @@ class ChatDetailView extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                selectedChat!.name,
+                                widget.selectedChat!.name,
                                 style: TextStyle(
                                   color: textColor,
                                   fontWeight: FontWeight.w700,
@@ -157,7 +196,7 @@ class ChatDetailView extends StatelessWidget {
                             CircleAvatar(
                               radius: 50,
                               child: Text(
-                                selectedChat!.name[0].toUpperCase(),
+                                widget.selectedChat!.name[0].toUpperCase(),
                                 style: const TextStyle(fontSize: 24),
                               ),
                             ),
@@ -165,7 +204,7 @@ class ChatDetailView extends StatelessWidget {
                             const SizedBox(height: 12),
 
                             Text(
-                              selectedChat!.name,
+                              widget.selectedChat!.name,
                               style: TextStyle(
                                 color: textColor,
                                 fontSize: 22,
@@ -178,7 +217,7 @@ class ChatDetailView extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: isDark
+                                color: widget.isDark
                                     ? const Color(0xFF2A2A2A)
                                     : Colors.grey.shade200,
                                 borderRadius: BorderRadius.circular(12),

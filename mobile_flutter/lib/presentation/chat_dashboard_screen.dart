@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'package:mobile_flutter/controllers/chat_dashboard_controllers.dart';
-import 'package:mobile_flutter/model/chat_user.dart';
+import 'package:mobile_flutter/model/chat_user_model.dart';
 import 'package:mobile_flutter/presentation/settings/setting_page.dart';
 import 'package:mobile_flutter/presentation/widgets/chat_detail.dart';
 import 'package:mobile_flutter/presentation/widgets/chat_list.dart';
@@ -63,7 +63,7 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
     setState(() {});
   }
 
-  Future<void> _onChatSelected(ChatModel chat) async {
+  Future<void> _onChatSelected(ChatRoomModel chat) async {
     final roomId = await _controller.openRoom(chat);
     if (roomId == null) {
       return;
@@ -78,7 +78,9 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
           builder: (_) => ChatDetailView(
             isDark: ThemeController.isDark,
             selectedChat: chat,
-            roomId: roomId,
+            // roomId: roomId,
+            controller: _controller,
+            
           ),
         ),
       );
@@ -138,7 +140,8 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
                           ? ChatDetailView(
                               isDark: isDark,
                               selectedChat: _controller.selectedChat,
-                              roomId: _controller.selectedRoomId!,
+                              // roomId: _controller.selectedRoomId!,
+                              controller: _controller,
                             )
                           : EmptyChatView(isDark: isDark),
                     ),

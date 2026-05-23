@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 // Import internal project kamu
 import 'package:mobile_flutter/services/api_client.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
-import 'package:mobile_flutter/provider/profile_providers.dart'; // Pastikan path ini benar
+import 'package:mobile_flutter/services/profile_providers.dart'; // Pastikan path ini benar
 import 'package:mobile_flutter/presentation/splash_screen.dart';
 
 void main() async {

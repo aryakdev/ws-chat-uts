@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'package:mobile_flutter/presentation/auth/login_page.dart';
 import 'package:mobile_flutter/presentation/chat_dashboard_screen.dart';
-import 'package:mobile_flutter/provider/profile_providers.dart';
+import 'package:mobile_flutter/services/profile_providers.dart';
 import 'package:mobile_flutter/services/api_client.dart';
 
 class SplashScreen extends StatefulWidget {

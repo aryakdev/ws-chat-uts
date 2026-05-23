@@ -10,16 +10,14 @@ class ProfileProvider with ChangeNotifier {
   String? _bio;
   String? _avatar;
   bool _isLoading = false;
-
-  // Getters
+  
   String get email => _email;
   String get userId => _userId;
   String? get username => _username;
   String? get bio => _bio;
   String? get avatar => _avatar;
   bool get isLoading => _isLoading;
-
-  // Load data awal dari Local Storage agar UI tidak kosong saat start
+  
   Future<void> initLocalData() async {
     final prefs = await SharedPreferences.getInstance();
     _email = prefs.getString('email') ?? '';

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_flutter/model/chat_user.dart';
+import 'package:mobile_flutter/model/chat_user_model.dart';
+import 'package:mobile_flutter/utils/date_formatter.dart';
 
 class ChatListView extends StatelessWidget {
   const ChatListView({
@@ -11,9 +12,9 @@ class ChatListView extends StatelessWidget {
   });
 
   final bool isDark;
-  final List<ChatModel> chats;
-  final ValueChanged<ChatModel> onChatSelected;
-  final ChatModel? selectedChat;
+  final List<ChatRoomModel> chats;
+  final ValueChanged<ChatRoomModel> onChatSelected;
+  final ChatRoomModel? selectedChat;
 
   static const _kBlue = Color(0xFF2C6BED);
   static const _kDarkBg = Color(0xFF121212);
@@ -97,11 +98,17 @@ class ChatListView extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            chat.time,
+                            chat.lastMessage != null
+                                ? formatTime(chat.lastMessage!.createdAt)
+                                : "",
                             style: TextStyle(
-                              color: chat.unreadCount > 0 ? _kBlue : subColor,
+                              color: chat.unreadCount > 0
+                                  ? _kBlue
+                                  : subColor,
                               fontSize: 12,
-                              fontWeight: chat.unreadCount > 0 ? FontWeight.w600 : FontWeight.normal,
+                              fontWeight: chat.unreadCount > 0
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
                             ),
                           ),
                         ],
@@ -110,12 +117,15 @@ class ChatListView extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              chat.lastMessage,
-                              style: TextStyle(color: subColor, fontSize: 13),
+                              chat.lastMessage?.content ?? "Belum ada pesan",
+                              style: TextStyle(
+                                color: subColor,
+                                fontSize: 13,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                          ),
+                                                      ),
                           if (chat.unreadCount > 0)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
