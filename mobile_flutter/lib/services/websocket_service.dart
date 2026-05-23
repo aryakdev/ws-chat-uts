@@ -55,6 +55,19 @@ class WebSocketService {
     }
   }
 
+  @visibleForTesting
+void injectChannel(WebSocketChannel channel) {
+  _channel = channel;
+  _channel?.stream.listen(
+    (message) {
+      debugPrint("Pesan masuk WS: $message");
+      onMessage?.call(message);
+    },
+    onError: (error) => debugPrint("Error WS: $error"),
+    onDone: () => debugPrint("Koneksi WS putus."),
+  );
+}
+
   void sendMessage({
     required String roomId,
     required String content,
