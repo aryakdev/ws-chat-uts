@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mobile_flutter/controllers/messages_controller.dart';
+import 'package:mobile_flutter/services/messages_service.dart';
 import 'package:provider/provider.dart';
 
 // Import internal project kamu
 import 'package:mobile_flutter/services/api_client.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
-import 'package:mobile_flutter/services/profile_providers.dart'; // Pastikan path ini benar
+import 'package:mobile_flutter/services/profile_providers.dart'; 
 import 'package:mobile_flutter/presentation/splash_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 void main() async {
   // 1. Memastikan binding Flutter sudah siap sebelum menjalankan fungsi async
@@ -17,15 +20,13 @@ void main() async {
   await ApiClient().init(); 
 
   runApp(
-    // 3. Bungkus aplikasi dengan MultiProvider
-    MultiProvider(
+        MultiBlocProvider(
       providers: [
-        // Daftarkan ProfileProvider agar bisa diakses di semua halaman
         ChangeNotifierProvider(
-          // Operator .. (cascade) digunakan untuk langsung memanggil initLocalData 
-          // tepat setelah objek dibuat.
+          
           create: (_) => ProfileProvider()..initLocalData(),
         ),
+        BlocProvider(create: (_) => MessageCubit(MessageService())),
       ],
       child: const MyApp(),
     ),

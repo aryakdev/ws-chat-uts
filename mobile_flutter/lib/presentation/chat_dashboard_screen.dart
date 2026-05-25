@@ -3,7 +3,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import 'package:mobile_flutter/controllers/chat_dashboard_controllers.dart';
+import 'package:mobile_flutter/controllers/chat_detail.controller.dart';
 import 'package:mobile_flutter/model/chat_user_model.dart';
 import 'package:mobile_flutter/presentation/settings/setting_page.dart';
 import 'package:mobile_flutter/presentation/widgets/chat_detail.dart';

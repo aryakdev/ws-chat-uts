@@ -24,8 +24,7 @@ class ProfileProvider with ChangeNotifier {
     _userId = prefs.getString('user_id') ?? '';
     notifyListeners();
   }
-
-  // Ambil data profil terbaru dari API
+  
   Future<void> fetchProfile() async {
     _isLoading = true;
     notifyListeners();
@@ -44,13 +43,11 @@ class ProfileProvider with ChangeNotifier {
       notifyListeners();
     }
   }
-
-  // Update profil ke server
+  
   Future<bool> updateProfile({required String name, required String bio, required String avatar}) async {
     if (_userId.isEmpty) return false;
 
     try {
-      // Menggunakan Dio instance dari ApiClient agar lebih konsisten
       final response = await ApiClient().dio.patch('/api/profile/update/$_userId', data: {
         'username': name,
         'bio': bio,
@@ -61,7 +58,7 @@ class ProfileProvider with ChangeNotifier {
         _username = name;
         _bio = bio;
         _avatar = avatar;
-        notifyListeners(); // Memicu UI di SELURUH aplikasi untuk update
+        notifyListeners();
         return true;
       }
     } catch (e) {

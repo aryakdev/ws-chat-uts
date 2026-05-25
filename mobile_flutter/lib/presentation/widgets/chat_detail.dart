@@ -2,20 +2,22 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_flutter/model/chat_user_model.dart';
 import 'package:mobile_flutter/presentation/widgets/empty_chat_view.dart';
-import 'package:mobile_flutter/controllers/chat_dashboard_controllers.dart';
+import 'package:mobile_flutter/controllers/chat_detail.controller.dart';
+import 'package:mobile_flutter/controllers/messages_controller.dart';
+import 'package:mobile_flutter/services/websocket_service.dart';
+import 'package:mobile_flutter/services/api_client.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ChatDetailView extends StatefulWidget {
    const ChatDetailView({
     super.key,
     required this.isDark,
     required this.selectedChat,
-    // required this.roomId,
     required this.controller,
   });
 
   final bool isDark;
   final ChatRoomModel? selectedChat;
-  // final String roomId;
   final ChatDashboardController controller;
   static const _kDarkBg = Color(0xFF121212);
   static const _kDarkSurface = Color(0xFF1E1E1E);
@@ -26,6 +28,30 @@ class ChatDetailView extends StatefulWidget {
 
 class _ChatDetailViewState extends State<ChatDetailView> {
   final TextEditingController messageController = TextEditingController();
+
+  @override
+void initState() {
+  super.initState();
+
+  final chat = widget.selectedChat;
+  if (chat == null) return;
+
+  _initializeChat(chat);
+}
+
+Future<void> _initializeChat(ChatRoomModel chat) async {
+  final cubit = context.read<MessageCubit>();
+  final ws = WebSocketService();
+  final token = await ApiClient().getAccessToken() ?? '';
+
+  final roomId = chat.id; // <-- FIX UTAMA
+
+  debugPrint("ROOM ID: $roomId");
+  debugPrint("TOKEN: $token");
+
+  cubit.loadMessages(roomId, token);
+  cubit.bindWebSocket(ws, roomId);
+}
 
   Widget _buildInputBar() {
   return Container(

@@ -15,6 +15,7 @@ func SetupRoutes(app *fiber.App) {
 	profile := api.Group("/profile", middleware.HttpMiddleware)
 	user := api.Group("/users", middleware.HttpMiddleware)
 	chat := api.Group("/chat", middleware.HttpMiddleware)
+	messages := api.Group("/messages", middleware.HttpMiddleware)
 
 	// Auth
 	auth.Post("/register", handlers.Register)
@@ -33,4 +34,7 @@ func SetupRoutes(app *fiber.App) {
 
 	//ChatRoom (Private)
 	chat.Post("/private", handlers.CreateOrGetPrivateRoom)
+
+	messages.Get("/", handlers.GetMessages)
+	messages.Get("/:room_id", handlers.GetMessagesByRoom)
 }

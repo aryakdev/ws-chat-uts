@@ -20,6 +20,21 @@ definitions:
     - email
     - password
     type: object
+  model.MessageResponse:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      room_id:
+        type: string
+      sender_id:
+        type: string
+      type:
+        type: string
+    type: object
   model.ProfileResponse:
     properties:
       avatar:
@@ -163,6 +178,64 @@ paths:
       summary: Get or Create Private Room
       tags:
       - Chat
+  /messages:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil semua pesan
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get All Messages
+      tags:
+      - Messages
+  /messages/{room_id}:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil semua pesan berdasarkan room ID
+      parameters:
+      - description: Room ID (UUID)
+        in: path
+        name: room_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get Messages By Room
+      tags:
+      - Messages
   /profile/avatar:
     patch:
       consumes:
