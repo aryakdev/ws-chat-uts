@@ -27,14 +27,16 @@ class MessageState {
 class MessageCubit extends Cubit<MessageState> {
   final MessageService service;
 
+  WebSocketService? _ws;
+
   MessageCubit(this.service)
       : super(const MessageState(
           messages: [],
           isLoading: false,
         ));
 
-  // ✅ FIXED LOAD MESSAGES
   Future<void> loadMessages(String roomId, String token) async {
+     emit(state.copyWith(isLoading: true, messages: []));
     print('🚀 loadMessages START');
 
     emit(state.copyWith(isLoading: true));
@@ -55,7 +57,7 @@ class MessageCubit extends Cubit<MessageState> {
       emit(state.copyWith(isLoading: false));
     }
   }
-  
+
   void addRealtimeMessage(MessageModel message) {
     emit(state.copyWith(
       messages: [...state.messages, message],
@@ -68,17 +70,29 @@ class MessageCubit extends Cubit<MessageState> {
       isLoading: false,
     ));
   }
+  void reset() {
+  emit(state.copyWith(messages: [], isLoading: false));
+}
 
-  void bindWebSocket(WebSocketService ws, String roomId) {
-    ws.onMessage = (raw) {
-      final data = jsonDecode(raw);
-      final message = MessageModel.fromJson(data);
+  void bindWebSocket(String roomId) {
+  _ws = WebSocketService();
 
-      if (message.roomId == roomId) {
-        addRealtimeMessage(message);
-      }
-    };
+  _ws!.onMessage = (raw) {
+    final data = jsonDecode(raw);
+    final message = MessageModel.fromJson(data);
 
-    ws.initWS();
-  }
+    if (message.roomId == roomId) {
+      addRealtimeMessage(message);
+    }
+  };
+
+  _ws!.initWS();
+}
+
+    void disconnectSocket() {
+      _ws?.disconnect();
+      _ws = null;
+
+      print('🔌 WebSocket disconnected');
+    } 
 }

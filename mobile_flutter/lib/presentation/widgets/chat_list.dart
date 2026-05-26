@@ -117,7 +117,9 @@ class ChatListView extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              chat.lastMessage?.content ?? "Belum ada pesan",
+                              (chat.lastMessage != null && chat.lastMessage!.content.isNotEmpty)
+                                  ? chat.lastMessage!.content
+                                  : "Belum ada pesan",
                               style: TextStyle(
                                 color: subColor,
                                 fontSize: 13,
@@ -125,7 +127,7 @@ class ChatListView extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                                                      ),
+                          ),
                           if (chat.unreadCount > 0)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),

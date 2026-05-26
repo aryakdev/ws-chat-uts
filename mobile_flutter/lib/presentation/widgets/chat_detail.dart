@@ -4,8 +4,9 @@ import 'package:mobile_flutter/model/chat_user_model.dart';
 import 'package:mobile_flutter/presentation/widgets/empty_chat_view.dart';
 import 'package:mobile_flutter/controllers/chat_detail.controller.dart';
 import 'package:mobile_flutter/controllers/messages_controller.dart';
-import 'package:mobile_flutter/services/websocket_service.dart';
+// import 'package:mobile_flutter/services/websocket_service.dart';
 import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/profile_providers.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ChatDetailView extends StatefulWidget {
@@ -30,6 +31,22 @@ class _ChatDetailViewState extends State<ChatDetailView> {
   final TextEditingController messageController = TextEditingController();
 
   @override
+void didUpdateWidget(covariant ChatDetailView oldWidget) {
+  super.didUpdateWidget(oldWidget);
+
+  final oldId = oldWidget.selectedChat?.id;
+  final newId = widget.selectedChat?.id;
+
+  if (oldId != newId && widget.selectedChat != null) {
+    debugPrint("🔄 ROOM CHANGED");
+    debugPrint("OLD: $oldId");
+    debugPrint("NEW: $newId");
+
+    _initializeChat(widget.selectedChat!);
+  }
+}
+
+  @override
 void initState() {
   super.initState();
 
@@ -41,16 +58,29 @@ void initState() {
 
 Future<void> _initializeChat(ChatRoomModel chat) async {
   final cubit = context.read<MessageCubit>();
-  final ws = WebSocketService();
+  cubit.disconnectSocket();
+  cubit.reset(); 
   final token = await ApiClient().getAccessToken() ?? '';
+  
+  final roomId = await widget.controller.openRoom(chat);
 
-  final roomId = chat.id; // <-- FIX UTAMA
+  if (roomId == null) {
+    debugPrint(" Gagal dapat roomId");
+    return;
+  }
 
   debugPrint("ROOM ID: $roomId");
   debugPrint("TOKEN: $token");
 
-  cubit.loadMessages(roomId, token);
-  cubit.bindWebSocket(ws, roomId);
+  await cubit.loadMessages(roomId, token);
+  cubit.bindWebSocket(roomId);
+}
+
+@override
+void dispose() {
+  context.read<MessageCubit>().disconnectSocket();
+  messageController.dispose();
+  super.dispose();
 }
 
   Widget _buildInputBar() {
@@ -213,57 +243,138 @@ Future<void> _initializeChat(ChatRoomModel chat) async {
                   ),
 
                   Expanded(
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const SizedBox(height: 40),
-                            CircleAvatar(
-                              radius: 50,
-                              child: Text(
-                                widget.selectedChat!.name[0].toUpperCase(),
-                                style: const TextStyle(fontSize: 24),
-                              ),
+                    child: BlocBuilder<MessageCubit, MessageState>(
+                      builder: (context, state) {
+                        if (state.isLoading) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        if (state.messages.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircleAvatar(
+                                  radius: 50,
+                                  child: Text(
+                                    widget.selectedChat!.name[0].toUpperCase(),
+                                    style: const TextStyle(fontSize: 24),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  widget.selectedChat!.name,
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  "No messages yet. Start the conversation!",
+                                  style: TextStyle(
+                                    color: subColor,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
                             ),
+                          );
+                        }
 
-                            const SizedBox(height: 12),
+                        return ListView.builder(
+                          reverse: true,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          itemCount: state.messages.length,
+                          itemBuilder: (context, index) {
+                            final message = state.messages[state.messages.length - 1 - index];
+                            final currentUserId = context.read<ProfileProvider>().userId;
+                            final isCurrentUser = message.senderId == currentUserId;
 
-                            Text(
-                              widget.selectedChat!.name,
-                              style: TextStyle(
-                                color: textColor,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Align(
+                                alignment: isCurrentUser
+                                    ? Alignment.centerRight
+                                    : Alignment.centerLeft,
+                                child: Container(
+                                  constraints: BoxConstraints(
+                                    maxWidth: MediaQuery.of(context).size.width * 0.7,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isCurrentUser
+                                        ? (widget.isDark
+                                            ? Colors.blue.shade700
+                                            : Colors.blue.shade500)
+                                        : (widget.isDark
+                                            ? const Color(0xFF2A2A2A)
+                                            : Colors.grey.shade300),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: isCurrentUser
+                                        ? CrossAxisAlignment.end
+                                        : CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        message.content,
+                                        style: TextStyle(
+                                          color: isCurrentUser
+                                              ? Colors.white
+                                              : textColor,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _formatTime(message.createdAt),
+                                        style: TextStyle(
+                                          color: isCurrentUser
+                                              ? Colors.white70
+                                              : Colors.grey,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: widget.isDark
-                                    ? const Color(0xFF2A2A2A)
-                                    : Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Column(
-                                children: [
-                                  Text("Lorem Ipsum"),
-                                  SizedBox(height: 6),
-                                  Text("Lorem Ipsum"),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                            );
+                          },
+                        );
+                      },
                     ),
+                  ),
                   _buildInputBar(),
                 ],
               ),
       ),
     );
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return "now";
+    } else if (difference.inHours < 1) {
+      return "${difference.inMinutes}m ago";
+    } else if (difference.inDays < 1) {
+      return "${difference.inHours}h ago";
+    } else if (difference.inDays == 1) {
+      return "yesterday";
+    } else if (difference.inDays < 7) {
+      return "${difference.inDays}d ago";
+    } else {
+      return "${dateTime.day}/${dateTime.month}/${dateTime.year}";
+    }
   }
 }
