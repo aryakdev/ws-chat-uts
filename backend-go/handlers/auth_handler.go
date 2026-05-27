@@ -26,31 +26,44 @@ func Register(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"message": "Format data tidak valid"})
 	}
+
 	if strings.TrimSpace(req.Username) == "" || !strings.Contains(req.Email, "@") || len(req.Password) < 8 {
-		return c.Status(400).JSON(fiber.Map{"message": "Validasi gagal"})
+		return c.Status(400).JSON(fiber.Map{"message": "Validasi gagal. Pastikan email valid dan password minimal 8 karakter"})
 	}
-	if len(req.Password) < 8 {
-		return c.Status(400).JSON(fiber.Map{"Message": "Password harus lebih dari 8"})
-	}
+
 	var existingUser model.User
 	if err := config.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
 		return c.Status(409).JSON(fiber.Map{"message": "Email sudah terdaftar"})
 	}
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"message": "Password terlalu panjang"})
+	}
+
+	tx := config.DB.Begin()
+
 	user := model.User{
 		ID:       uuid.New(),
 		Email:    req.Email,
 		Password: string(hashedPassword),
 	}
-	if err := config.DB.Create(&user).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "Gagal membuat user"})
+	if err := tx.Create(&user).Error; err != nil {
+		tx.Rollback()
+		return c.Status(500).JSON(fiber.Map{"message": "Gagal Membuat User"})
 	}
 	profile := model.Profile{
 		ID:       uuid.New(),
 		UserID:   user.ID,
 		Username: req.Username,
 	}
-	config.DB.Create(&profile)
+
+	if err := tx.Create(&profile).Error; err != nil {
+		tx.Rollback()
+		return c.Status(500).JSON(fiber.Map{"message": "Gagal Membuat Profile User"})
+	}
+
+	tx.Commit()
 	return c.Status(201).JSON(fiber.Map{"message": "Register berhasil", "user_id": user.ID})
 }
 
@@ -87,14 +100,20 @@ func Login(c *fiber.Ctx) error {
 		"exp":     time.Now().Add(60 * time.Minute).Unix(),
 	}
 	atToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
-	at, _ := atToken.SignedString([]byte(accessSecret))
+	at, err := atToken.SignedString([]byte(accessSecret))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "Gagal generate token"})
+	}
 
 	refreshClaims := jwt.MapClaims{
 		"user_id": user.ID,
 		"exp":     time.Now().Add(7 * 24 * time.Hour).Unix(),
 	}
 	rtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
-	rt, _ := rtToken.SignedString([]byte(refreshSecret))
+	rt, err := rtToken.SignedString([]byte(refreshSecret))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "Gagal generate token"})
+	}
 
 	cookie := new(fiber.Cookie)
 	cookie.Name = "refresh_token"
@@ -140,7 +159,10 @@ func RefreshToken(c *fiber.Ctx) error {
 	}
 
 	newToken := jwt.NewWithClaims(jwt.SigningMethodHS256, newClaims)
-	at, _ := newToken.SignedString([]byte(config.GetEnv("JWT_REFRESH_SECRET")))
+	at, err := newToken.SignedString([]byte(config.GetEnv("JWT_REFRESH_SECRET")))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "Gagal generate access token"})
+	}
 
 	return c.JSON(fiber.Map{
 		"access_token": at,

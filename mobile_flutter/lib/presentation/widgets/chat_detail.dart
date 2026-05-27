@@ -292,9 +292,10 @@ void dispose() {
                           itemBuilder: (context, index) {
                             final message = state.messages[state.messages.length - 1 - index];
                             final currentUserId = context.read<ProfileProvider>().userId;
-                            final isCurrentUser = message.senderId == currentUserId;
+                            final isCurrentUser = message.senderId.toString().trim() == currentUserId.toString().trim();
 
                             return Padding(
+                              key: ValueKey(message.id),
                               padding: const EdgeInsets.only(bottom: 12),
                               child: Align(
                                 alignment: isCurrentUser

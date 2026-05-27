@@ -10,15 +10,17 @@ import (
 
 func FindPrivateRoom(currentUserID string, targetUserID string) (string, error) {
 	query := `
+	SELECT chat_room_id
+	from chat_members
+	WHERE user_id = ?
+
+	INTERSECT
+
 	SELECT cm.chat_room_id
 	FROM chat_members cm
-	JOIN chat_rooms cr
-		ON cr.id = cm.chat_room_id
-	WHERE cm.user_id IN (?, ?)
-	AND cr.is_group = false
-	GROUP BY cm.chat_room_id
-	HAVING COUNT(DISTINCT cm.user_id) = 2
-	LIMIT 1
+	JOIN chat_Rooms cr ON cr.id = cm.chat_room_id
+	WHERE cm.user_id = ? AND cr.is_group = false
+	LIMIT 1;
 `
 
 	var roomID string

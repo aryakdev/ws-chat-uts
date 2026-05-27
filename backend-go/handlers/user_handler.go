@@ -78,6 +78,7 @@ func GetUserByID(c *fiber.Ctx) error {
 	// ambil user + profile
 	if err := config.DB.Preload("Profile").
 		Where("id = ?", userID).
+		Limit(20).
 		First(&user).Error; err != nil {
 
 		return c.Status(404).JSON(fiber.Map{

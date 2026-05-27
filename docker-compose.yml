@@ -52,7 +52,6 @@ services:
     volumes:
       - ./backend-go/uploads:/app/uploads  
     environment:
-      # Gunakan nama service (db/redis) sebagai HOST agar terhubung via network internal
       DB_HOST: db
       DB_PORT: 5432
       REDIS_HOST: redis

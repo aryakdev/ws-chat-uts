@@ -21,7 +21,10 @@ import (
 func GetMessages(c *fiber.Ctx) error {
 	var messages []model.Message
 
-	if err := config.DB.Preload("Sender").Find(&messages).Error; err != nil {
+	if err := config.DB.Preload("Sender").
+		Find(&messages).
+		Limit(30).
+		Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"message": "Gagal mengambil pesan",
 		})
