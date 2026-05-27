@@ -95,9 +95,13 @@ func Login(c *fiber.Ctx) error {
 	accessSecret := config.GetEnv("JWT_ACCESS_SECRET")
 	refreshSecret := config.GetEnv("JWT_REFRESH_SECRET")
 
+	sessionId := uuid.NewString()
+
 	accessClaims := jwt.MapClaims{
-		"user_id": user.ID,
-		"exp":     time.Now().Add(60 * time.Minute).Unix(),
+		"user_id":    user.ID,
+		"session_id": sessionId,
+		"iat":        time.Now().Unix(),
+		"exp":        time.Now().Add(60 * time.Minute).Unix(),
 	}
 	atToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
 	at, err := atToken.SignedString([]byte(accessSecret))
@@ -106,8 +110,10 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	refreshClaims := jwt.MapClaims{
-		"user_id": user.ID,
-		"exp":     time.Now().Add(7 * 24 * time.Hour).Unix(),
+		"user_id":    user.ID,
+		"session_id": sessionId,
+		"iat":        time.Now().Unix(),
+		"exp":        time.Now().Add(7 * 24 * time.Hour).Unix(),
 	}
 	rtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
 	rt, err := rtToken.SignedString([]byte(refreshSecret))
@@ -121,12 +127,14 @@ func Login(c *fiber.Ctx) error {
 	cookie.Expires = time.Now().Add(7 * 24 * time.Hour)
 	cookie.HTTPOnly = true
 	cookie.SameSite = "Lax"
+
 	c.Cookie(cookie)
 
 	return c.JSON(fiber.Map{
 		"message":       "Login berhasil",
 		"access_token":  at,
 		"refresh_token": rt,
+		"session_id":    sessionId,
 		"user_id":       user.ID,
 	})
 }
