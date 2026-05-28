@@ -424,6 +424,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Get detail user
       tags:
       - Users

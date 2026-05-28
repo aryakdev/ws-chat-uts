@@ -3,15 +3,19 @@ package handlers
 import (
 	"backend-go/model"
 	"errors"
-	"os"
+
 	"path/filepath"
 	"strings"
 
 	"backend-go/config"
 
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+
+	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 )
 
 // GetMyProfile godoc
@@ -99,7 +103,7 @@ func GetMyProfile(c *fiber.Ctx) error {
 // @Failure      404      {object}  model.ErrorResponse
 // @Router       /profile/me [patch]
 func UpdateMyProfile(c *fiber.Ctx) error {
-	userID := c.Locals("user_id").(uuid.UUID)
+	userID := c.Locals("user_id").(string)
 	var req model.UpdateProfileRequest
 
 	if err := c.BodyParser(&req); err != nil {
@@ -143,46 +147,103 @@ func UpdateMyProfile(c *fiber.Ctx) error {
 // @Failure      500     {object}  model.ErrorResponse
 // @Router       /profile/avatar [patch]
 func UpdateAvatar(c *fiber.Ctx) error {
+
 	rawUser := c.Locals("user_id")
+
 	if rawUser == nil {
-		return c.Status(401).JSON(fiber.Map{"message": "unauthorized"})
+		return c.Status(401).JSON(fiber.Map{
+			"message": "unauthorized",
+		})
 	}
 
-	userID := rawUser.(uuid.UUID)
+	// middleware masih string
+	userIDStr, ok := rawUser.(string)
+
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{
+			"message": "invalid user id type",
+		})
+	}
+
+	// parse hanya di handler ini
+	userID, err := uuid.Parse(userIDStr)
+
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{
+			"message": "invalid uuid",
+		})
+	}
 
 	file, err := c.FormFile("avatar")
+
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"message": "file avatar wajib diisi"})
+		return c.Status(400).JSON(fiber.Map{
+			"message": "file avatar wajib diisi",
+		})
 	}
 
 	ext := strings.ToLower(filepath.Ext(file.Filename))
-	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
-		return c.Status(400).JSON(fiber.Map{"message": "format file harus jpg/jpeg/png"})
-	}
 
-	uploadDir := "./uploads"
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "gagal membuat folder uploads"})
+	if ext != ".jpg" &&
+		ext != ".jpeg" &&
+		ext != ".png" {
+
+		return c.Status(400).JSON(fiber.Map{
+			"message": "format file harus jpg/jpeg/png",
+		})
 	}
 
 	var profile model.Profile
-	if err := config.DB.Where("user_id = ?", userID).First(&profile).Error; err != nil {
-		return c.Status(404).JSON(fiber.Map{"message": "profile tidak ditemukan"})
+
+	if err := config.DB.
+		Where("user_id = ?", userID).
+		First(&profile).Error; err != nil {
+
+		return c.Status(404).JSON(fiber.Map{
+			"message": "profile tidak ditemukan",
+		})
 	}
 
-	// 2. Tentukan nama file
-	filename := userID.String() + "_" + uuid.New().String() + ext
+	src, err := file.Open()
 
-	// 3. SEKARANG AMAN UNTUK SIMPAN (Karena folder sudah pasti ada)
-	if err := c.SaveFile(file, uploadDir+"/"+filename); err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "gagal menyimpan file ke server"})
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "gagal membuka file",
+		})
 	}
 
-	avatarURL := "/uploads/" + filename
+	defer src.Close()
+
+	if config.Cloudinary == nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "cloudinary belum diinisialisasi",
+		})
+	}
+
+	resp, err := config.Cloudinary.Upload.Upload(
+		context.Background(),
+		src,
+		uploader.UploadParams{
+			Folder:   "avatars",
+			PublicID: userID.String(),
+		},
+	)
+
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	avatarURL := resp.SecureURL
+
 	profile.Avatar = avatarURL
 
 	if err := config.DB.Save(&profile).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "gagal update avatar di database"})
+
+		return c.Status(500).JSON(fiber.Map{
+			"message": "gagal update avatar di database",
+		})
 	}
 
 	return c.JSON(fiber.Map{

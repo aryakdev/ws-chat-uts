@@ -58,6 +58,7 @@ func GetUsers(c *fiber.Ctx) error {
 // @Tags         Users
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        id   path      string  true  "User ID (UUID)"
 // @Success      200  {object}  map[string]interface{} "Success response"
 // @Failure      400  {object}  model.ErrorResponse

@@ -521,6 +521,11 @@ const docTemplate = `{
         },
         "/users/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Mengambil detail user berdasarkan ID",
                 "consumes": [
                     "application/json"
