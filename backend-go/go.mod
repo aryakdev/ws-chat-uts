@@ -3,6 +3,7 @@ module backend-go
 go 1.25.0
 
 require (
+	github.com/cloudinary/cloudinary-go/v2 v2.15.0
 	github.com/gofiber/fiber/v2 v2.52.13
 	github.com/gofiber/websocket/v2 v2.2.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -16,7 +17,9 @@ require (
 
 require (
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
+	github.com/creasty/defaults v1.7.0 // indirect
 	github.com/fasthttp/websocket v1.5.12 // indirect
+	github.com/gorilla/schema v1.4.1 // indirect
 	github.com/savsgio/gotils v0.0.0-20250924091648-bce9a52d7761 // indirect
 	github.com/swaggo/files v0.0.0-20220610200504-28940afbdbfe // indirect
 )

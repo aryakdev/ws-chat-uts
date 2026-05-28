@@ -6,7 +6,6 @@ import (
 	"github.com/gofiber/websocket/v2"
 )
 
-// WsHandler adalah fungsi untuk menangani koneksi WebSocket yang masuk
 func WsHandler(c *websocket.Conn) {
 	log.Println("🔥 Koneksi WebSocket baru berhasil terhubung!")
 
