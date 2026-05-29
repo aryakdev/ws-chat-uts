@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'storage_io.dart' if (dart.library.html) 'storage_web.dart';
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
@@ -51,9 +51,8 @@ class ApiClient {
   // INIT
   // =========================
   Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    _accessToken = prefs.getString(_accessTokenKey);
-    _refreshToken = prefs.getString(_refreshTokenKey);
+    _accessToken = await storageGetString(_accessTokenKey);
+    _refreshToken = await storageGetString(_refreshTokenKey);
 
     dio.interceptors.add(
       InterceptorsWrapper(
@@ -104,13 +103,10 @@ class ApiClient {
     required String accessToken,
     required String refreshToken,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-
     _accessToken = accessToken;
     _refreshToken = refreshToken;
-
-    await prefs.setString(_accessTokenKey, accessToken);
-    await prefs.setString(_refreshTokenKey, refreshToken);
+    await storageSetString(_accessTokenKey, accessToken);
+    await storageSetString(_refreshTokenKey, refreshToken);
   }
 
   // =========================
@@ -165,16 +161,14 @@ class ApiClient {
   // LOGOUT (SINGLE SOURCE OF TRUTH)
   // =========================
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-
     _accessToken = null;
     _refreshToken = null;
     _refreshFuture = null;
 
     dio.options.headers.remove('Authorization');
 
-    await prefs.remove(_accessTokenKey);
-    await prefs.remove(_refreshTokenKey);
+    await storageRemove(_accessTokenKey);
+    await storageRemove(_refreshTokenKey);
   }
 
   // =========================

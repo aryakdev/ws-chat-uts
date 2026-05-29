@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mobile_flutter/services/storage_io.dart' if (dart.library.html) 'package:mobile_flutter/services/storage_web.dart';
 import 'package:mobile_flutter/services/api_client.dart';
 // import 'package:dio/dio.dart';
 
@@ -19,9 +19,8 @@ class ProfileProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   
   Future<void> initLocalData() async {
-    final prefs = await SharedPreferences.getInstance();
-    _email = prefs.getString('email') ?? '';
-    _userId = prefs.getString('user_id') ?? '';
+    _email = await storageGetString('email') ?? '';
+    _userId = await storageGetString('user_id') ?? '';
     notifyListeners();
   }
   

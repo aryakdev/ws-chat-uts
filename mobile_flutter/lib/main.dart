@@ -13,24 +13,31 @@ import 'package:mobile_flutter/presentation/splash_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 void main() async {
-  // 1. Memastikan binding Flutter sudah siap sebelum menjalankan fungsi async
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Inisialisasi Service Global
-  await ThemeController.init(); 
-  await ApiClient().init(); 
+  await ThemeController.init();
+  await ApiClient().init();
+
+  final profileProvider = ProfileProvider();
+  await profileProvider.initLocalData();
 
   runApp(
-        MultiBlocProvider(
+    MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          
-          create: (_) => ProfileProvider()..initLocalData(),
+        ChangeNotifierProvider.value(
+          value: profileProvider,
         ),
+
         Provider<WebSocketService>(
           create: (_) => WebSocketService(),
         ),
-        BlocProvider(create: (context) => MessageCubit(MessageService(), webSocketService: context.read<WebSocketService>())),
+
+        BlocProvider(
+          create: (context) => MessageCubit(
+            MessageService(),
+            webSocketService: context.read<WebSocketService>(),
+          ),
+        ),
       ],
       child: const MyApp(),
     ),

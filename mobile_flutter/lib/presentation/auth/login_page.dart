@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mobile_flutter/services/storage_io.dart' if (dart.library.html) 'package:mobile_flutter/services/storage_web.dart';
 import 'register_page.dart';
 import '../chat_dashboard_screen.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
 import 'package:mobile_flutter/services/api_client.dart';
+
+
 
 const kSignalBlue       = Color(0xFF2C6BED);
 const kSignalBlueDark   = Color(0xFF1A56D6);
@@ -68,9 +70,8 @@ class _LoginPageState extends State<LoginPage> {
         refreshToken: refreshToken,
       );
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_id', data['user_id']?.toString() ?? '');
-      await prefs.setString('email', _emailCtrl.text.trim());
+      await storageSetString('user_id', data['user_id']?.toString() ?? '');
+      await storageSetString('email', _emailCtrl.text.trim());
 
       if (!mounted) return;
       

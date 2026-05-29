@@ -12,11 +12,20 @@ import (
 )
 
 func HandleWebSocket(conn *websocket.Conn) {
+
 	defer conn.Close()
 
 	userID := conn.Locals("user_id").(string)
 
 	log.Println("USER CONNECTED:", userID)
+
+	var currentRoomID string
+
+	defer func() {
+		if currentRoomID != "" {
+			Unregister(conn, currentRoomID, userID)
+		}
+	}()
 
 	for {
 
@@ -33,6 +42,10 @@ func HandleWebSocket(conn *websocket.Conn) {
 			log.Println("Invalid JSON:", err)
 			continue
 		}
+
+		currentRoomID = req.RoomID
+
+		WsRegister(conn, req.RoomID, userID)
 
 		roomUUID, err := uuid.Parse(req.RoomID)
 		if err != nil {
@@ -68,16 +81,10 @@ func HandleWebSocket(conn *websocket.Conn) {
 			CreatedAt: message.CreatedAt,
 		}
 
-		jsonResponse, err := json.Marshal(response)
+		err = BroadcastJSON(req.RoomID, response)
 		if err != nil {
-			log.Println("Marshal Error:", err)
+			log.Println("Broadcast Error:", err)
 			continue
-		}
-
-		err = conn.WriteMessage(websocket.TextMessage, jsonResponse)
-		if err != nil {
-			log.Println("Write Error:", err)
-			break
 		}
 	}
 }

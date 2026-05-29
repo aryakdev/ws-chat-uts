@@ -8,6 +8,8 @@ import (
 
 	_ "backend-go/docs"
 
+	"backend-go/handlers"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -34,19 +36,11 @@ func main() {
 	config.LoadEnv()
 	config.ConnectDatabase()
 
-	// --- PRO-LOGIC: AUTO CREATE UPLOADS FOLDER ---
-	uploadDir := "./uploads"
-	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
-		log.Println("📁 Folder uploads tidak ditemukan, membuat folder baru...")
-		err := os.MkdirAll(uploadDir, 0755)
-		if err != nil {
-			log.Fatal("❌ Gagal membuat folder upload: ", err)
-		}
-	}
-
 	app := fiber.New(fiber.Config{
 		AppName: "E-Library API v1.0",
 	})
+
+	// start the websocket hub (will be started once before listen)
 
 	app.Static("/uploads", "./uploads")
 
@@ -75,6 +69,8 @@ func main() {
 
 	config.InitCloudinary()
 
-	log.Println("🚀 Server running on http://localhost:" + port)
+	handlers.StartDefaultHub()
+
+	log.Println(" Server running on http://localhost:" + port)
 	log.Fatal(app.Listen(":" + port))
 }
