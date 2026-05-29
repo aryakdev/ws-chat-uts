@@ -2,6 +2,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'package:mobile_flutter/controllers/chat_detail.controller.dart';
 import 'package:mobile_flutter/model/chat_user_model.dart';
@@ -11,6 +12,7 @@ import 'package:mobile_flutter/presentation/widgets/chat_list.dart';
 import 'package:mobile_flutter/presentation/widgets/navbar.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
 import 'package:mobile_flutter/presentation/widgets/empty_chat_view.dart';
+import 'package:mobile_flutter/services/websocket_service.dart';
 
 const _kBlue = Color(0xFF2C6BED);
 const _kDarkBg = Color(0xFF121212);
@@ -26,7 +28,7 @@ class ChatDashboardScreen extends StatefulWidget {
 
 class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
   int _selectedIndex = 0;
-  final ChatDashboardController _controller = ChatDashboardController();
+  late final ChatDashboardController _controller;
 
   @override
   void initState() {
@@ -34,6 +36,14 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
 
     print("INIT STATE JALAN");
 
+    // Initialize controller immediately with shared WebSocketService
+    try {
+      final ws = context.read<WebSocketService>();
+      _controller = ChatDashboardController(webSocketService: ws);
+    } catch (_) {
+      _controller = ChatDashboardController();
+    }
+    
     _initialize();
   }
 

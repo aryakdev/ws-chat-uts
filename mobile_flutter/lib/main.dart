@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_flutter/controllers/messages_controller.dart';
 import 'package:mobile_flutter/services/messages_service.dart';
+import 'package:mobile_flutter/services/websocket_service.dart';
 import 'package:provider/provider.dart';
 
 // Import internal project kamu
@@ -26,7 +27,10 @@ void main() async {
           
           create: (_) => ProfileProvider()..initLocalData(),
         ),
-        BlocProvider(create: (_) => MessageCubit(MessageService())),
+        Provider<WebSocketService>(
+          create: (_) => WebSocketService(),
+        ),
+        BlocProvider(create: (context) => MessageCubit(MessageService(), webSocketService: context.read<WebSocketService>())),
       ],
       child: const MyApp(),
     ),

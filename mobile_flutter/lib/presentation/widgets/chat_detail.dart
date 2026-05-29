@@ -58,7 +58,7 @@ void initState() {
 
 Future<void> _initializeChat(ChatRoomModel chat) async {
   final cubit = context.read<MessageCubit>();
-  cubit.disconnectSocket();
+  // Don't disconnect the shared WebSocket - just reset messages and bind to new room
   cubit.reset(); 
   final token = await ApiClient().getAccessToken() ?? '';
   

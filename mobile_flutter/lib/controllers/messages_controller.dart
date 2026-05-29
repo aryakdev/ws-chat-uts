@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../model/message_model.dart';
 import '../services/messages_service.dart';
@@ -29,8 +30,9 @@ class MessageCubit extends Cubit<MessageState> {
 
   WebSocketService? _ws;
 
-  MessageCubit(this.service)
-      : super(const MessageState(
+  MessageCubit(this.service, {WebSocketService? webSocketService})
+      : _ws = webSocketService,
+        super(const MessageState(
           messages: [],
           isLoading: false,
         ));
@@ -75,7 +77,11 @@ class MessageCubit extends Cubit<MessageState> {
 }
 
   void bindWebSocket(String roomId) {
-  _ws = WebSocketService();
+  final alreadyHadWs = _ws != null;
+
+  if (!alreadyHadWs) {
+    _ws = WebSocketService();
+  }
 
   _ws!.onMessage = (raw) {
     final data = jsonDecode(raw);
@@ -86,7 +92,13 @@ class MessageCubit extends Cubit<MessageState> {
     }
   };
 
-  _ws!.initWS();
+  if (alreadyHadWs) {
+    debugPrint('🔄 Reusing existing WebSocket instance for room: $roomId');
+    _ws!.reconnectIfNeeded();
+  } else {
+    debugPrint('🆕 Creating and initializing new WebSocket instance for room: $roomId');
+    _ws!.initWS();
+  }
 }
 
     void disconnectSocket() {
