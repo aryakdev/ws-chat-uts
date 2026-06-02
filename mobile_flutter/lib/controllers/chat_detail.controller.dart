@@ -89,7 +89,7 @@ class ChatDashboardController {
   void clearSelectedChat() {
     selectedChat = null;
   }
-
+  
   void dispose() {
     _webSocketService.disconnect();
   }
