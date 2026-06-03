@@ -55,7 +55,6 @@ class _LoginPageState extends State<LoginPage> {
     final data = res.data as Map<String, dynamic>;
 
     if (res.statusCode == 200) {
-      // Mengambil token dengan fallback yang aman
       final accessToken = (data['access_token'] ?? data['token'])?.toString() ?? '';
       final refreshToken = data['refresh_token']?.toString() ?? '';
 
@@ -64,7 +63,6 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // Pastikan method ini ada di ApiClient Anda
       await ApiClient().saveAuthTokens(
         accessToken: accessToken,
         refreshToken: refreshToken,
@@ -84,7 +82,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _error = data['Message'] ?? data['message'] ?? 'Login gagal');
     }
   } catch (e) {
-    // Menampilkan error asli jika perlu untuk debugging: e.toString()
+    
     setState(() => _error = 'Terjadi Kesalahan Koneksi.');
   } finally {
     if (mounted) setState(() => _loading = false);

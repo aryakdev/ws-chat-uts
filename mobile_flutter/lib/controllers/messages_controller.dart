@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../model/message_model.dart';
-import '../services/messages_service.dart';
+import '../domain/repositories/message_repository.dart';
 import '../services/websocket_service.dart';
 
 class MessageState {
@@ -26,7 +26,7 @@ class MessageState {
 }
 
 class MessageCubit extends Cubit<MessageState> {
-  final MessageService service;
+  final MessageRepository service;
 
   WebSocketService? _ws;
 

@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../model/message_model.dart';
+import '../domain/repositories/message_repository.dart';
 
-class MessageService {
-  final String baseUrl = "http://localhost:8080/api";
+class MessageService implements MessageRepository {
+  final String baseUrl = "http://192.168.33.56:8080/api";
 
   Future<List<MessageModel>> fetchMessages(
     String roomId,
@@ -44,5 +45,11 @@ class MessageService {
       print("ERROR parsing response: $e");
       rethrow;
     }
+  }
+
+  @override
+  Future<void> sendMessage(String roomId, String content, String token) async {
+    // TODO: Implement sendMessage API call
+    print("sendMessage not yet implemented");
   }
 }
