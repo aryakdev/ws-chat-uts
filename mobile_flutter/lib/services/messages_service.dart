@@ -3,7 +3,10 @@ import '../model/message_model.dart';
 import '../domain/repositories/message_repository.dart';
 
 class MessageService implements MessageRepository {
-
+  final ApiClient apiClient;
+  MessageService(this.apiClient);
+  
+  @override
   Future<List<MessageModel>> fetchMessages(
     String roomId,
     String token,
@@ -11,9 +14,7 @@ class MessageService implements MessageRepository {
     final response = await ApiClient().dio.get(
       '/api/messages/$roomId', 
     );
-
-    print("STATUS: ${response.statusCode}");
-    print("BODY: ${response.data}");
+   
 
     if (response.statusCode != 200) {
       throw Exception("Failed to load messages");
@@ -32,6 +33,5 @@ class MessageService implements MessageRepository {
 
   @override
   Future<void> sendMessage(String roomId, String content, String token) async {
-    print("sendMessage not yet implemented");
   }
 }

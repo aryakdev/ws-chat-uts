@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_flutter/controllers/messages_controller.dart';
-import 'package:mobile_flutter/services/messages_service.dart';
+import 'package:mobile_flutter/domain/repositories/message_repository.dart';
 import 'package:mobile_flutter/services/websocket_service.dart';
 import 'package:provider/provider.dart';
 
@@ -11,6 +11,7 @@ import 'package:mobile_flutter/theme/app_theme.dart';
 import 'package:mobile_flutter/services/profile_providers.dart'; 
 import 'package:mobile_flutter/presentation/splash_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'injection.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,14 +29,10 @@ void main() async {
           value: profileProvider,
         ),
 
-        Provider<WebSocketService>(
-          create: (_) => WebSocketService(),
-        ),
-
         BlocProvider(
           create: (context) => MessageCubit(
-            MessageService(),
-            webSocketService: context.read<WebSocketService>(),
+            getIt<MessageRepository>(),
+            webSocketService: getIt<WebSocketService>(),
           ),
         ),
       ],
