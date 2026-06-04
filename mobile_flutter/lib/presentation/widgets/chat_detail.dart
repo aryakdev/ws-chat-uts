@@ -1,16 +1,15 @@
+import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_flutter/model/chat_user_model.dart';
 import 'package:mobile_flutter/presentation/widgets/empty_chat_view.dart';
 import 'package:mobile_flutter/controllers/chat_detail.controller.dart';
 import 'package:mobile_flutter/controllers/messages_controller.dart';
-// import 'package:mobile_flutter/services/websocket_service.dart';
 import 'package:mobile_flutter/services/api_client.dart';
-import 'package:mobile_flutter/services/profile_providers.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ChatDetailView extends StatefulWidget {
-   const ChatDetailView({
+  const ChatDetailView({
     super.key,
     required this.isDark,
     required this.selectedChat,
@@ -29,157 +28,171 @@ class ChatDetailView extends StatefulWidget {
 
 class _ChatDetailViewState extends State<ChatDetailView> {
   final TextEditingController messageController = TextEditingController();
+  String currentUserId = '';
 
   @override
-void didUpdateWidget(covariant ChatDetailView oldWidget) {
-  super.didUpdateWidget(oldWidget);
+  void didUpdateWidget(covariant ChatDetailView oldWidget) {
+    super.didUpdateWidget(oldWidget);
 
-  final oldId = oldWidget.selectedChat?.id;
-  final newId = widget.selectedChat?.id;
+    final oldId = oldWidget.selectedChat?.id;
+    final newId = widget.selectedChat?.id;
 
-  if (oldId != newId && widget.selectedChat != null) {
-    debugPrint("🔄 ROOM CHANGED");
-    debugPrint("OLD: $oldId");
-    debugPrint("NEW: $newId");
+    if (oldId != newId && widget.selectedChat != null) {
+      debugPrint("ROOM CHANGED");
+      debugPrint("OLD: $oldId");
+      debugPrint("NEW: $newId");
 
-    _initializeChat(widget.selectedChat!);
+      _initializeChat(widget.selectedChat!);
+    }
   }
-}
 
   @override
-void initState() {
-  super.initState();
+  void initState() {
+    super.initState();
 
-  final chat = widget.selectedChat;
-  if (chat == null) return;
+    final chat = widget.selectedChat;
+    if (chat == null) return;
 
-  _initializeChat(chat);
-}
-
-Future<void> _initializeChat(ChatRoomModel chat) async {
-  final cubit = context.read<MessageCubit>();
-  // Don't disconnect the shared WebSocket - just reset messages and bind to new room
-  cubit.reset(); 
-  final token = await ApiClient().getAccessToken() ?? '';
-  
-  final roomId = await widget.controller.openRoom(chat);
-
-  if (roomId == null) {
-    debugPrint(" Gagal dapat roomId");
-    return;
+    _initializeChat(chat);
   }
 
-  debugPrint("ROOM ID: $roomId");
-  debugPrint("TOKEN: $token");
+  Future<void> _initializeChat(ChatRoomModel chat) async {
+    final cubit = context.read<MessageCubit>();
 
-  await cubit.loadMessages(roomId, token);
-  cubit.bindWebSocket(roomId);
-}
+    cubit.reset();
+    final token = await ApiClient().getAccessToken() ?? '';
 
-@override
-void dispose() {
-  context.read<MessageCubit>().disconnectSocket();
-  messageController.dispose();
-  super.dispose();
-}
+    if (token.isNotEmpty) {
+      try {
+        final parts = token.split('.');
+        if (parts.length == 3) {
+          String normalized = base64Url.normalize(parts[1]);
+          String payload = utf8.decode(base64Url.decode(normalized));
+          Map<String, dynamic> payloadMap = jsonDecode(payload);
+          if (payloadMap['user_id'] != null) {
+            setState(() {
+              currentUserId = payloadMap['user_id'].toString().trim().toLowerCase();
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint("Decode Error: $e");
+      }
+    }
+
+    final roomId = await widget.controller.openRoom(chat);
+
+    if (roomId == null) {
+      debugPrint("Gagal dapat roomId");
+      return;
+    }
+
+    debugPrint("ROOM ID: $roomId");
+    debugPrint("TOKEN: $token");
+
+    await cubit.loadMessages(roomId, token);
+    cubit.bindWebSocket(roomId);
+  }
+
+  @override
+  void dispose() {
+    context.read<MessageCubit>().disconnectSocket();
+    messageController.dispose();
+    super.dispose();
+  }
 
   Widget _buildInputBar() {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-    decoration: BoxDecoration(
-      color: widget.isDark ? ChatDetailView._kDarkSurface : Colors.white,
-      border: Border(
-        top: BorderSide(
-          color: widget.isDark ? Colors.white12 : const Color(0xFFEFEFEF),
-        ),
-      ),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: messageController,
-            decoration: InputDecoration(
-              
-              hintText: "Message",
-              hintStyle: TextStyle(
-                color: widget.isDark ? Colors.white30 : Colors.grey,
-                fontSize: 15,
-              ),
-       
-              filled: true,
-              fillColor: widget.isDark 
-                  ? const Color(0xFF2A2A2A) 
-                  : const Color(0xFFF4F4F4),
-              
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(24),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-
-              prefixIcon: Row(
-                mainAxisSize: MainAxisSize.min, // 
-                children: [
-                  const SizedBox(width: 8), 
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(CupertinoIcons.smiley),
-                    iconSize: 22,
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(CupertinoIcons.camera), 
-                    iconSize: 22,
-                  ),
-                ],
-              ),
-
-              suffixIcon: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: () {
-                      final text = messageController.text.trim();
-
-                      debugPrint("=== SEND BUTTON CLICKED ===");
-                      debugPrint("Text input: $text");
-
-                      if (text.isEmpty) {
-                        debugPrint("Text kosong, batal kirim");
-                        return;
-                      }
-
-                      debugPrint("Calling controller.sendMessage...");
-
-                      widget.controller.sendMessage(
-                        content: text,
-                      );
-
-                      debugPrint("Message sent to controller");
-
-                      messageController.clear();
-
-                      debugPrint("Input cleared");
-                      debugPrint("===========================");
-                    },
-                    icon: const Icon(CupertinoIcons.paperplane_fill),
-                    iconSize: 22,
-                  ),
-                  IconButton(onPressed: () {},
-                  icon: const Icon(CupertinoIcons.add),
-                  iconSize: 22,
-                  )
-                ],
-              )
-            ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: widget.isDark ? ChatDetailView._kDarkSurface : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: widget.isDark ? Colors.white12 : const Color(0xFFEFEFEF),
           ),
         ),
-      ],
-    ),
-  );
-}
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: messageController,
+              decoration: InputDecoration(
+                hintText: "Message",
+                hintStyle: TextStyle(
+                  color: widget.isDark ? Colors.white30 : Colors.grey,
+                  fontSize: 15,
+                ),
+                filled: true,
+                fillColor: widget.isDark
+                    ? const Color(0xFF2A2A2A)
+                    : const Color(0xFFF4F4F4),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                prefixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(CupertinoIcons.smiley),
+                      iconSize: 22,
+                    ),
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(CupertinoIcons.camera),
+                      iconSize: 22,
+                    ),
+                  ],
+                ),
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () {
+                        final text = messageController.text.trim();
+
+                        debugPrint("SEND BUTTON CLICKED");
+                        debugPrint("Text input: $text");
+
+                        if (text.isEmpty) {
+                          debugPrint("Text kosong, batal kirim");
+                          return;
+                        }
+
+                        debugPrint("Calling controller.sendMessage...");
+
+                        widget.controller.sendMessage(
+                          content: text,
+                        );
+
+                        debugPrint("Message sent to controller");
+
+                        messageController.clear();
+
+                        debugPrint("Input cleared");
+                      },
+                      icon: const Icon(CupertinoIcons.paperplane_fill),
+                      iconSize: 22,
+                    ),
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(CupertinoIcons.add),
+                      iconSize: 22,
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -209,13 +222,11 @@ void dispose() {
                     ),
                     child: Row(
                       children: [
-                        
                         if (isMobile)
                           IconButton(
                             onPressed: () => Navigator.pop(context),
                             icon: const Icon(CupertinoIcons.back),
                           ),
-
                         CircleAvatar(
                           radius: 22,
                           child: Text(widget.selectedChat!.name[0].toUpperCase()),
@@ -241,7 +252,6 @@ void dispose() {
                       ],
                     ),
                   ),
-
                   Expanded(
                     child: BlocBuilder<MessageCubit, MessageState>(
                       builder: (context, state) {
@@ -291,8 +301,8 @@ void dispose() {
                           itemCount: state.messages.length,
                           itemBuilder: (context, index) {
                             final message = state.messages[state.messages.length - 1 - index];
-                            final currentUserId = context.read<ProfileProvider>().userId;
-                            final isCurrentUser = message.senderId.toString().trim() == currentUserId.toString().trim();
+                            final senderId = message.senderId.toString().trim().toLowerCase();
+                            final isCurrentUser = currentUserId.isNotEmpty && senderId == currentUserId;
 
                             return Padding(
                               key: ValueKey(message.id),

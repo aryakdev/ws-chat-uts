@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_flutter/services/storage_io.dart' if (dart.library.html) 'package:mobile_flutter/services/storage_web.dart';
 import 'package:mobile_flutter/services/api_client.dart';
-// import 'package:dio/dio.dart';
 
 class ProfileProvider with ChangeNotifier {
   String _email = '';
@@ -10,20 +9,26 @@ class ProfileProvider with ChangeNotifier {
   String? _bio;
   String? _avatar;
   bool _isLoading = false;
-  
+
   String get email => _email;
   String get userId => _userId;
   String? get username => _username;
   String? get bio => _bio;
   String? get avatar => _avatar;
   bool get isLoading => _isLoading;
-  
+
   Future<void> initLocalData() async {
     _email = await storageGetString('email') ?? '';
-    _userId = await storageGetString('user_id') ?? '';
+    final storedUserId = await storageGetString('user_id');
+    if (storedUserId != null && storedUserId.isNotEmpty) {
+      _userId = storedUserId;
+    } else {
+      final storedId = await storageGetString('id');
+      _userId = storedId ?? '';
+    }
     notifyListeners();
   }
-  
+
   Future<void> fetchProfile() async {
     _isLoading = true;
     notifyListeners();
@@ -34,6 +39,12 @@ class ProfileProvider with ChangeNotifier {
         _username = response.data['username'];
         _bio = response.data['bio'];
         _avatar = response.data['avatar'];
+
+        if (response.data['user_id'] != null) {
+          _userId = response.data['user_id'].toString();
+        } else if (response.data['id'] != null) {
+          _userId = response.data['id'].toString();
+        }
       }
     } catch (e) {
       debugPrint("Gagal fetch profile: $e");
@@ -42,7 +53,7 @@ class ProfileProvider with ChangeNotifier {
       notifyListeners();
     }
   }
-  
+
   Future<bool> updateProfile({required String name, required String bio, required String avatar}) async {
     if (_userId.isEmpty) return false;
 
