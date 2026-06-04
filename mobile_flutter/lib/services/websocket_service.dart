@@ -23,24 +23,22 @@ class WebSocketService {
   Future<void> initWS() async {
     try {
       debugPrint('🌐 WebSocketService($_instanceId).initWS() called - creating new connection');
+
       
-      // Cancel existing subscription to avoid duplicate listeners
       await _subscription?.cancel();
       _subscription = null;
       debugPrint('✅ Old subscription cancelled');
       
-      String ipAddress = "127.0.0.1";
-      if (kIsWeb) {
-        ipAddress = "localhost";
-      } else if (Platform.isAndroid) {
-        ipAddress = "10.0.2.2";
-      }
-
       final accessToken = await ApiClient().getAccessToken();
+      debugPrint('🔑 Token saat initWS: $accessToken');
+
+      final wsBase = ApiClient().baseUrl
+        .replaceFirst('http://', 'ws://')
+        .replaceFirst('https://', 'wss://');
       
       final String wsString = kIsWeb && accessToken != null && accessToken.isNotEmpty
-          ? "ws://$ipAddress:8080/ws?token=$accessToken"
-          : "ws://$ipAddress:8080/ws";
+          ? "$wsBase/ws?token=$accessToken"
+          : "$wsBase/ws";
 
       final wsUrl = Uri.parse(wsString);
       debugPrint('🌐 WebSocketService($_instanceId) connecting to: $wsUrl');
@@ -52,6 +50,7 @@ class WebSocketService {
           wsUrl,
           headers: {
             if (accessToken != null && accessToken.isNotEmpty)
+            
               'Authorization': 'Bearer $accessToken',
           },
         );
