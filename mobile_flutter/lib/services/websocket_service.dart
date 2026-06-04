@@ -24,21 +24,15 @@ class WebSocketService {
     try {
       debugPrint('🌐 WebSocketService($_instanceId).initWS() called - creating new connection');
       
-      // Cancel existing subscription to avoid duplicate listeners
       await _subscription?.cancel();
       _subscription = null;
       debugPrint('✅ Old subscription cancelled');
       
-      String ipAddress = "127.0.0.1";
-      if (kIsWeb) {
-        ipAddress = "localhost";
-      } else if (Platform.isAndroid) {
-        ipAddress = "10.0.2.2";
-      }
+      String ipAddress = "192.168.1.47";
 
       final accessToken = await ApiClient().getAccessToken();
       
-      final String wsString = kIsWeb && accessToken != null && accessToken.isNotEmpty
+      final String wsString = accessToken != null && accessToken.isNotEmpty
           ? "ws://$ipAddress:8080/ws?token=$accessToken"
           : "ws://$ipAddress:8080/ws";
 
@@ -59,7 +53,6 @@ class WebSocketService {
 
       debugPrint('🌐 WebSocketService($_instanceId) connected successfully');
       
-      // Register listener only once per channel
       _subscription = _channel?.stream.listen(
       (message) {
         debugPrint("Pesan masuk WS: $message");
@@ -75,7 +68,6 @@ class WebSocketService {
 
   @visibleForTesting
   void injectChannel(WebSocketChannel channel) {
-    // Cancel existing subscription
     _subscription?.cancel();
     _subscription = null;
     
@@ -111,7 +103,6 @@ class WebSocketService {
     _channel?.sink.add(jsonEncode(payload));
   }
 
-  /// Send a join action to subscribe this connection to a room on the server
   void sendJoin(String roomId) {
     if (_channel == null) {
       debugPrint('Cannot send join, channel not ready');
@@ -126,7 +117,6 @@ class WebSocketService {
     _channel?.sink.add(jsonEncode(payload));
   }
 
-  /// Send a leave action to unsubscribe this connection from a room on the server
   void sendLeave(String roomId) {
     if (_channel == null) {
       debugPrint('Cannot send leave, channel not ready');
@@ -150,7 +140,6 @@ class WebSocketService {
     }
   }
 
-
   void disconnect() {
     debugPrint('❌ WebSocketService($_instanceId) disconnecting...');
     _subscription?.cancel();
@@ -159,6 +148,4 @@ class WebSocketService {
     _channel = null;
     debugPrint('❌ WebSocketService($_instanceId) disconnected');
   }
-
-  
 }

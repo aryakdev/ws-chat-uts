@@ -29,6 +29,7 @@ class ChatDetailView extends StatefulWidget {
 class _ChatDetailViewState extends State<ChatDetailView> {
   final TextEditingController messageController = TextEditingController();
   String currentUserId = '';
+  late MessageCubit _messageCubit;
 
   @override
   void didUpdateWidget(covariant ChatDetailView oldWidget) {
@@ -38,10 +39,6 @@ class _ChatDetailViewState extends State<ChatDetailView> {
     final newId = widget.selectedChat?.id;
 
     if (oldId != newId && widget.selectedChat != null) {
-      debugPrint("ROOM CHANGED");
-      debugPrint("OLD: $oldId");
-      debugPrint("NEW: $newId");
-
       _initializeChat(widget.selectedChat!);
     }
   }
@@ -49,6 +46,7 @@ class _ChatDetailViewState extends State<ChatDetailView> {
   @override
   void initState() {
     super.initState();
+    _messageCubit = context.read<MessageCubit>();
 
     final chat = widget.selectedChat;
     if (chat == null) return;
@@ -57,9 +55,7 @@ class _ChatDetailViewState extends State<ChatDetailView> {
   }
 
   Future<void> _initializeChat(ChatRoomModel chat) async {
-    final cubit = context.read<MessageCubit>();
-
-    cubit.reset();
+    _messageCubit.reset();
     final token = await ApiClient().getAccessToken() ?? '';
 
     if (token.isNotEmpty) {
@@ -83,20 +79,16 @@ class _ChatDetailViewState extends State<ChatDetailView> {
     final roomId = await widget.controller.openRoom(chat);
 
     if (roomId == null) {
-      debugPrint("Gagal dapat roomId");
       return;
     }
 
-    debugPrint("ROOM ID: $roomId");
-    debugPrint("TOKEN: $token");
-
-    await cubit.loadMessages(roomId, token);
-    cubit.bindWebSocket(roomId);
+    await _messageCubit.loadMessages(roomId, token);
+    _messageCubit.bindWebSocket(roomId);
   }
 
   @override
   void dispose() {
-    context.read<MessageCubit>().disconnectSocket();
+    _messageCubit.disconnectSocket();
     messageController.dispose();
     super.dispose();
   }
@@ -156,25 +148,15 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                       onPressed: () {
                         final text = messageController.text.trim();
 
-                        debugPrint("SEND BUTTON CLICKED");
-                        debugPrint("Text input: $text");
-
                         if (text.isEmpty) {
-                          debugPrint("Text kosong, batal kirim");
                           return;
                         }
-
-                        debugPrint("Calling controller.sendMessage...");
 
                         widget.controller.sendMessage(
                           content: text,
                         );
 
-                        debugPrint("Message sent to controller");
-
                         messageController.clear();
-
-                        debugPrint("Input cleared");
                       },
                       icon: const Icon(CupertinoIcons.paperplane_fill),
                       iconSize: 22,
@@ -350,7 +332,7 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                                           color: isCurrentUser
                                               ? Colors.white70
                                               : Colors.grey,
-                                          fontSize: 12,
+                                              fontSize: 12,
                                         ),
                                       ),
                                     ],

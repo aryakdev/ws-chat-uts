@@ -1,55 +1,45 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import '../model/message_model.dart';
 import '../domain/repositories/message_repository.dart';
 
 class MessageService implements MessageRepository {
-  final String baseUrl = "http://192.168.33.56:8080/api";
+  String get baseUrl {
+    return 'http://192.168.1.47:8080/api';
+  }
 
-  Future<List<MessageModel>> fetchMessages(
-    String roomId,
-    String token,
-  ) async {
-    final url = Uri.parse("$baseUrl/messages/$roomId");
-
-    final response = await http.get(
-      url,
-      headers: {
-        "Accept": "application/json",
-        "Authorization": "Bearer $token",
-      },
-    );
-
-    print("URL: ${response.request?.url}");
-    print("STATUS: ${response.statusCode}");
-    print("BODY: ${response.body}");
-
-    if (response.statusCode != 200) {
-      throw Exception("Failed to load messages");
-    }
-
+  @override
+  Future<List<MessageModel>> fetchMessages(String roomId, String token) async {
     try {
-      final Map<String, dynamic> json = jsonDecode(response.body);
-      print("DECODED JSON: $json");
-      
-      if (json["success"] != true) {
-        print("Response not successful: ${json['message']}");
-        return [];
-      }
-      
-      final List data = json["data"] ?? [];
-      print("DATA COUNT: ${data.length}");
+      final url = Uri.parse("$baseUrl/messages/$roomId");
 
-      return data.map((e) => MessageModel.fromJson(e)).toList();
+      final response = await http.get(
+        url,
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decoded = jsonDecode(response.body);
+        
+        if (decoded is Map<String, dynamic>) {
+          if (decoded["success"] == true) {
+            final List data = decoded["data"] ?? [];
+            return data.map((e) => MessageModel.fromJson(e)).toList();
+          }
+        } else if (decoded is List) {
+          return decoded.map((e) => MessageModel.fromJson(e)).toList();
+        }
+      }
+      return [];
     } catch (e) {
-      print("ERROR parsing response: $e");
-      rethrow;
+      return [];
     }
   }
 
   @override
-  Future<void> sendMessage(String roomId, String content, String token) async {
-    // TODO: Implement sendMessage API call
-    print("sendMessage not yet implemented");
-  }
+  Future<void> sendMessage(String roomId, String content, String token) async {}
 }

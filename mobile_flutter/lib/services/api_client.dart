@@ -40,16 +40,9 @@ class ApiClient {
   Future<String?>? _refreshFuture;
 
   String get baseUrl {
-    if (kIsWeb) return 'http://localhost:8080';
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8080';
-    }
-    return 'http://127.0.0.1:8080';
+    return 'http://192.168.1.47:8080';
   }
 
-  // =========================
-  // INIT
-  // =========================
   Future<void> init() async {
     _accessToken = await storageGetString(_accessTokenKey);
     _refreshToken = await storageGetString(_refreshTokenKey);
@@ -62,7 +55,6 @@ class ApiClient {
           }
           handler.next(options);
         },
-
         onError: (error, handler) async {
           final statusCode = error.response?.statusCode;
           final isUnauthorized = statusCode == 401;
@@ -96,9 +88,6 @@ class ApiClient {
     );
   }
 
-  // =========================
-  // AUTH STORAGE
-  // =========================
   Future<void> saveAuthTokens({
     required String accessToken,
     required String refreshToken,
@@ -109,9 +98,6 @@ class ApiClient {
     await storageSetString(_refreshTokenKey, refreshToken);
   }
 
-  // =========================
-  // REFRESH TOKEN
-  // =========================
   Future<String?> _refreshAccessToken() async {
     _refreshFuture ??= _performRefresh();
 
@@ -157,9 +143,6 @@ class ApiClient {
     }
   }
 
-  // =========================
-  // LOGOUT (SINGLE SOURCE OF TRUTH)
-  // =========================
   Future<void> logout() async {
     _accessToken = null;
     _refreshToken = null;
@@ -171,9 +154,6 @@ class ApiClient {
     await storageRemove(_refreshTokenKey);
   }
 
-  // =========================
-  // HELPERS
-  // =========================
   Future<String?> getAccessToken() async => _accessToken;
 
   Future<Map<String, String>> authorizedHeaders() async {
@@ -188,37 +168,38 @@ class ApiClient {
 
     return headers;
   }
+
   Future<Response> post(
-  String path, {
-  dynamic data,
-  Options? options,
-}) async {
-  return dio.post(path, data: data, options: options);
-}
+    String path, {
+    dynamic data,
+    Options? options,
+  }) async {
+    return dio.post(path, data: data, options: options);
+  }
 
-Future<Response> get(
-  String path, {
-  Map<String, dynamic>? queryParameters,
-  Options? options,
-}) async {
-  return dio.get(path, queryParameters: queryParameters, options: options);
-}
+  Future<Response> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    return dio.get(path, queryParameters: queryParameters, options: options);
+  }
 
-Future<Response> put(
-  String path, {
-  dynamic data,
-  Options? options,
-}) async {
-  return dio.put(path, data: data, options: options);
-}
+  Future<Response> put(
+    String path, {
+    dynamic data,
+    Options? options,
+  }) async {
+    return dio.put(path, data: data, options: options);
+  }
 
-Future<Response> delete(
-  String path, {
-  dynamic data,
-  Options? options,
-}) async {
-  return dio.delete(path, data: data, options: options);
-}
+  Future<Response> delete(
+    String path, {
+    dynamic data,
+    Options? options,
+  }) async {
+    return dio.delete(path, data: data, options: options);
+  }
 
   String buildUrl(String path) {
     return '${baseUrl.replaceAll(RegExp(r'\/+'), '')}/${path.replaceFirst(RegExp(r'^/'), '')}';
