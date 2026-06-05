@@ -3,13 +3,22 @@ package middleware
 import (
 	"backend-go/config"
 
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 func WsAuthMiddleware(c *fiber.Ctx) error {
 
-	tokenString := c.Query("token")
+	tokenString := c.Get("Authorization")
+	if tokenString != "" {
+		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
+	}
+
+	if tokenString == "" {
+		tokenString = c.Query("token")
+	}
 
 	if tokenString == "" {
 		return c.Status(401).JSON(fiber.Map{

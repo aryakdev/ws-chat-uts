@@ -9,6 +9,9 @@ import 'dart:convert';
 import 'package:mobile_flutter/services/api_client.dart';
 
 class WebSocketService {
+  static final WebSocketService _instance = WebSocketService._internal();
+  factory WebSocketService() => _instance;
+
   WebSocketChannel? _channel;
   WebSocketChannel? get channel => _channel;
   
@@ -16,17 +19,16 @@ class WebSocketService {
   late final String _instanceId;
   void Function(String message)? onMessage;
 
-  WebSocketService() {
+  WebSocketService._internal() {
     _instanceId = Random().nextInt(100000).toString();
   } 
 
   Future<void> initWS() async {
     try {
-      debugPrint('🌐 WebSocketService($_instanceId).initWS() called - creating new connection');
+      debugPrint('🌐 WebSocketService($_instanceId).initWS() called');
       
       await _subscription?.cancel();
       _subscription = null;
-      debugPrint('✅ Old subscription cancelled');
       
       String ipAddress = "192.168.1.47";
 
@@ -37,7 +39,7 @@ class WebSocketService {
           : "ws://$ipAddress:8080/ws";
 
       final wsUrl = Uri.parse(wsString);
-      debugPrint('🌐 WebSocketService($_instanceId) connecting to: $wsUrl');
+      debugPrint('🌐 WebSocketService connecting to: $wsUrl');
 
       if (kIsWeb) {
         _channel = WebSocketChannel.connect(wsUrl);
@@ -51,18 +53,30 @@ class WebSocketService {
         );
       }
 
-      debugPrint('🌐 WebSocketService($_instanceId) connected successfully');
-      
       _subscription = _channel?.stream.listen(
       (message) {
-        debugPrint("Pesan masuk WS: $message");
-        onMessage?.call(message);
+        try {
+          final Map<String, dynamic> raw = jsonDecode(message);
+          
+          final fixedJson = {
+            "id": raw["ID"] ?? raw["id"] ?? "",
+            "room_id": raw["RoomID"] ?? raw["room_id"] ?? "",
+            "sender_id": raw["SenderID"] ?? raw["sender_id"] ?? "",
+            "content": raw["Content"] ?? raw["content"] ?? "",
+            "type": raw["Type"] ?? raw["type"] ?? "text",
+            "created_at": raw["CreatedAt"] ?? raw["created_at"] ?? DateTime.now().toIso8601String(),
+          };
+          
+          onMessage?.call(jsonEncode(fixedJson));
+        } catch (e) {
+          onMessage?.call(message);
+        }
       },
       onError: (error) => debugPrint("Error WS: $error"),
       onDone: () => debugPrint("Koneksi WS putus."),
     );
     } catch (e) {
-      debugPrint(" Gagal WS: $e");
+      debugPrint("Gagal WS: $e");
     }
   }
 
@@ -74,7 +88,6 @@ class WebSocketService {
     _channel = channel;
     _subscription = _channel?.stream.listen(
       (message) {
-        debugPrint("Pesan masuk WS: $message");
         onMessage?.call(message);
       },
       onError: (error) => debugPrint("Error WS: $error"),
@@ -87,9 +100,6 @@ class WebSocketService {
     required String content,
   }) {
     if (_channel == null) {
-      debugPrint(
-        "Gagal kirim, koneksi WebSocket belum siap!",
-      );
       return;
     }
 
@@ -105,7 +115,6 @@ class WebSocketService {
 
   void sendJoin(String roomId) {
     if (_channel == null) {
-      debugPrint('Cannot send join, channel not ready');
       return;
     }
 
@@ -119,7 +128,6 @@ class WebSocketService {
 
   void sendLeave(String roomId) {
     if (_channel == null) {
-      debugPrint('Cannot send leave, channel not ready');
       return;
     }
 
@@ -133,19 +141,16 @@ class WebSocketService {
 
   Future<void> reconnectIfNeeded() async {
     if (_channel == null) {
-      debugPrint('🔌 WebSocketService($_instanceId) channel was null, reconnecting...');
       await initWS();
     } else {
-      debugPrint('✅ WebSocketService($_instanceId) already connected, skipping init');
+      debugPrint('✅ WS already connected');
     }
   }
 
   void disconnect() {
-    debugPrint('❌ WebSocketService($_instanceId) disconnecting...');
     _subscription?.cancel();
     _subscription = null;
     _channel?.sink.close();
     _channel = null;
-    debugPrint('❌ WebSocketService($_instanceId) disconnected');
   }
 }

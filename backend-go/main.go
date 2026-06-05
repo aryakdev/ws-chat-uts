@@ -40,14 +40,11 @@ func main() {
 		AppName: "E-Library API v1.0",
 	})
 
-	app.Static("/uploads", "./uploads")
-
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://10.0.2.2:8080,http://192.168.1.47:3000,http://192.168.1.47:8080",
+		AllowOrigins:     "*",
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, Cookie, X-Requested-With",
-		ExposeHeaders:    "Set-Cookie",
-		AllowCredentials: true,
+		AllowHeaders:     "Origin,Content-Type,Authorization",
+		AllowCredentials: false,
 	}))
 	app.Use(logger.New())
 
@@ -69,6 +66,6 @@ func main() {
 
 	handlers.StartDefaultHub()
 
-	log.Println("Server running on http://localhost:" + port)
+	log.Println(" Server running on http://localhost:" + port)
 	log.Fatal(app.Listen(":" + port))
 }

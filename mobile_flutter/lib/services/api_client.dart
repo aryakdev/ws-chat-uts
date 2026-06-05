@@ -40,7 +40,7 @@ class ApiClient {
   Future<String?>? _refreshFuture;
 
   String get baseUrl {
-    return 'http://192.168.1.47:8080';
+    return "http://192.168.1.47:8080";
   }
 
   Future<void> init() async {

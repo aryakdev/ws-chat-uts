@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../services/profile_providers.dart';
-import '../../theme/theme_controller.dart';
-import '../auth/login_page.dart';
+import 'package:mobile_flutter/services/profile_providers.dart';
+import 'package:mobile_flutter/theme/theme_controller.dart';
+import 'package:mobile_flutter/presentation/auth/login_page.dart';
 import 'package:mobile_flutter/services/storage_io.dart' if (dart.library.html) 'package:mobile_flutter/services/storage_web.dart';
 import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/presentation/widgets/profile_avatar.dart';
 
 const _kBlue = Color(0xFF2C6BED);
 
@@ -20,7 +21,6 @@ class _SettingPageState extends State<SettingPage> {
   @override
   void initState() {
     super.initState();
-    // Memanggil data saat halaman dibuka
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProfileProvider>().fetchProfile();
     });
@@ -30,7 +30,6 @@ class _SettingPageState extends State<SettingPage> {
     final profileProv = context.read<ProfileProvider>();
     final usernameCtrl = TextEditingController(text: profileProv.username);
     final bioCtrl = TextEditingController(text: profileProv.bio);
-    final avatarCtrl = TextEditingController(text: profileProv.avatar);
 
     showDialog(
       context: context,
@@ -41,7 +40,6 @@ class _SettingPageState extends State<SettingPage> {
           children: [
             TextField(controller: usernameCtrl, decoration: const InputDecoration(labelText: 'Username')),
             TextField(controller: bioCtrl, decoration: const InputDecoration(labelText: 'Bio')),
-            TextField(controller: avatarCtrl, decoration: const InputDecoration(labelText: 'URL Avatar')),
           ],
         ),
         actions: [
@@ -51,11 +49,21 @@ class _SettingPageState extends State<SettingPage> {
               final success = await profileProv.updateProfile(
                 name: usernameCtrl.text,
                 bio: bioCtrl.text,
-                avatar: avatarCtrl.text,
+                avatar: profileProv.avatar ?? '',
               );
+              
               if (!context.mounted) return;
 
-              if (success && mounted) Navigator.pop(context);
+              if (success) {
+                Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Gagal menyimpan profil"),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             child: const Text('Simpan'),
           ),
@@ -66,11 +74,9 @@ class _SettingPageState extends State<SettingPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch: Mendengarkan perubahan data di Provider
     final profileProv = context.watch<ProfileProvider>();
     final isDark = ThemeController.isDark;
     
-    // Tampilan awal (Placeholder) jika data sedang loading atau null
     final displayUsername = profileProv.username ?? "Loading...";
     final displayBio = profileProv.bio ?? "Belum ada bio";
     final initial = displayUsername.isNotEmpty ? displayUsername[0].toUpperCase() : '?';
@@ -94,8 +100,6 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 
-  // --- Sub-Widgets untuk merapikan build method ---
-
   Widget _buildProfileCard(String name, String email, String bio, String initial, String? avatarUrl) {
     return Card(
       child: Padding(
@@ -104,11 +108,9 @@ class _SettingPageState extends State<SettingPage> {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 32,
-                  backgroundColor: _kBlue,
-                  backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
-                  child: (avatarUrl == null || avatarUrl.isEmpty) ? Text(initial, style: const TextStyle(fontSize: 24, color: Colors.white)) : null,
+                ProfileAvatar(
+                  currentImageUrl: avatarUrl,
+                  initialName: initial,
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -144,7 +146,7 @@ class _SettingPageState extends State<SettingPage> {
         value: isDark, 
         onChanged: (val) async {
           await ThemeController.setDark(val);
-          setState(() {}); // Untuk refresh tema lokal halaman
+          setState(() {});
         }
       ),
     );
@@ -155,7 +157,6 @@ class _SettingPageState extends State<SettingPage> {
       leading: const Icon(Icons.logout, color: Colors.red),
       title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
       onTap: () async {
-        // clear auth tokens and local user info
         await ApiClient().logout();
         await storageRemove('user_id');
         await storageRemove('email');
