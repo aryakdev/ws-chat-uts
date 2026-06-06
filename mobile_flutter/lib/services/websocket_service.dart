@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'dart:convert';
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
 
 class WebSocketService {
   WebSocketChannel? _channel;
@@ -29,7 +29,7 @@ class WebSocketService {
       _subscription = null;
       debugPrint('✅ Old subscription cancelled');
       
-      final accessToken = await ApiClient().getAccessToken();
+      final accessToken = ApiClient().accessToken;
       debugPrint('🔑 Token saat initWS: $accessToken');
 
       final wsBase = ApiClient().baseUrl

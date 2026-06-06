@@ -3,7 +3,7 @@ import 'package:mobile_flutter/services/storage_io.dart' if (dart.library.html) 
 import 'register_page.dart';
 import '../chat_dashboard_screen.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
 
 
 
@@ -63,7 +63,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      await ApiClient().saveAuthTokens(
+      await ApiClient().saveTokens(
         accessToken: accessToken,
         refreshToken: refreshToken,
       );

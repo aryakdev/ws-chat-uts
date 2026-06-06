@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:mobile_flutter/presentation/auth/login_page.dart';
 import 'package:mobile_flutter/presentation/chat_dashboard_screen.dart';
 import 'package:mobile_flutter/services/profile_providers.dart';
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -25,7 +25,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     await Future.delayed(const Duration(seconds: 2));
 
-    final token = await ApiClient().getAccessToken();
+    final token = ApiClient().accessToken;
     final hasToken = token != null && token.isNotEmpty;
 
     if (!mounted) return;

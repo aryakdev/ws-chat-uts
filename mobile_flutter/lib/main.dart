@@ -5,7 +5,7 @@ import 'package:mobile_flutter/services/websocket_service.dart';
 import 'package:provider/provider.dart';
 
 // Import internal project kamu
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
 import 'package:mobile_flutter/theme/app_theme.dart';
 import 'package:mobile_flutter/services/profile_providers.dart'; 
@@ -18,6 +18,8 @@ void main() async {
 
   await ThemeController.init();
   await ApiClient().init();
+
+  setupLocator();
 
   final profileProvider = ProfileProvider();
   await profileProvider.initLocalData();

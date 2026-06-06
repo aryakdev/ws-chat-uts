@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_flutter/services/storage_io.dart' if (dart.library.html) 'package:mobile_flutter/services/storage_web.dart';
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
 
 class ProfileProvider with ChangeNotifier {
   String _email = '';

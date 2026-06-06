@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:mobile_flutter/model/chat_user_model.dart';
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
 import 'package:mobile_flutter/services/chat_service.dart';
 import 'package:mobile_flutter/services/websocket_service.dart';
 

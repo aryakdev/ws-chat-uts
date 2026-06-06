@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
 
 class ChatService {
   final Dio _dio;

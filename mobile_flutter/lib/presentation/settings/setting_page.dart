@@ -4,7 +4,9 @@ import '../../services/profile_providers.dart';
 import '../../theme/theme_controller.dart';
 import '../auth/login_page.dart';
 import 'package:mobile_flutter/services/storage_io.dart' if (dart.library.html) 'package:mobile_flutter/services/storage_web.dart';
-import 'package:mobile_flutter/services/api_client.dart';
+// import 'package:mobile_flutter/services/api_client_services.dart';
+import 'package:mobile_flutter/controllers/api_client_controllers.dart';
+import 'package:mobile_flutter/injection.dart';
 
 const _kBlue = Color(0xFF2C6BED);
 
@@ -155,8 +157,7 @@ class _SettingPageState extends State<SettingPage> {
       leading: const Icon(Icons.logout, color: Colors.red),
       title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
       onTap: () async {
-        // clear auth tokens and local user info
-        await ApiClient().logout();
+         getIt<ApiController>().logout;
         await storageRemove('user_id');
         await storageRemove('email');
         if (mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginPage()), (route) => false);

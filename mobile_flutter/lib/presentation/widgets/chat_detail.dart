@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+// import 'package:mobile_flutter/controllers/api_client_controllers.dart';
 import 'package:mobile_flutter/model/chat_user_model.dart';
 import 'package:mobile_flutter/presentation/widgets/empty_chat_view.dart';
 import 'package:mobile_flutter/controllers/chat_detail.controller.dart';
 import 'package:mobile_flutter/controllers/messages_controller.dart';
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ChatDetailView extends StatefulWidget {
@@ -60,7 +61,7 @@ class _ChatDetailViewState extends State<ChatDetailView> {
     final cubit = context.read<MessageCubit>();
 
     cubit.reset();
-    final token = await ApiClient().getAccessToken() ?? '';
+    final token = ApiClient().accessToken ?? '';
 
     if (token.isNotEmpty) {
       try {
