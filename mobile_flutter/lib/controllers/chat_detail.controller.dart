@@ -3,12 +3,20 @@ import 'package:mobile_flutter/model/chat_user_model.dart';
 import 'package:mobile_flutter/services/api_client_services.dart';
 import 'package:mobile_flutter/services/chat_service.dart';
 import 'package:mobile_flutter/services/websocket_service.dart';
+import 'package:mobile_flutter/controllers/messages_controller.dart';
+import 'dart:convert';
 
-class ChatDashboardController {
-  ChatDashboardController({WebSocketService? webSocketService})
-  : _webSocketService = webSocketService ?? WebSocketService();
+class ChatDetailController {
+  ChatDetailController({
+    WebSocketService? webSocketService,
+    required this.messageCubit, 
+  }) : _webSocketService = webSocketService ?? WebSocketService();
+
 
   final WebSocketService _webSocketService;
+  final MessageCubit messageCubit;
+  
+  WebSocketService get webSocketService => _webSocketService;
 
   ChatRoomModel? selectedChat;
   String? selectedRoomId;
@@ -27,6 +35,7 @@ class ChatDashboardController {
     debugPrint(
       "Controller receive message : $message"
     );
+    
   }
 
   void sendMessage({

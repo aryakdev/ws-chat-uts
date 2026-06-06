@@ -75,7 +75,7 @@ class _LoginPageState extends State<LoginPage> {
       
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const ChatDashboardScreen()),
+        MaterialPageRoute(builder: (_) => const ChatDetailScreen()),
         (route) => false,
       );
     } else {

@@ -42,7 +42,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => hasToken ? const ChatDashboardScreen() : const LoginPage(),
+        builder: (_) => hasToken ? const ChatDetailScreen() : const LoginPage(),
       ),
     );
   }

@@ -19,7 +19,7 @@ class ChatDetailView extends StatefulWidget {
 
   final bool isDark;
   final ChatRoomModel? selectedChat;
-  final ChatDashboardController controller;
+  final ChatDetailController controller;
   static const _kDarkBg = Color(0xFF121212);
   static const _kDarkSurface = Color(0xFF1E1E1E);
 
@@ -30,6 +30,8 @@ class ChatDetailView extends StatefulWidget {
 class _ChatDetailViewState extends State<ChatDetailView> {
   final TextEditingController messageController = TextEditingController();
   String currentUserId = '';
+  late MessageCubit _messageCubit;
+
 
   @override
   void didUpdateWidget(covariant ChatDetailView oldWidget) {
@@ -50,6 +52,7 @@ class _ChatDetailViewState extends State<ChatDetailView> {
   @override
   void initState() {
     super.initState();
+     _messageCubit = context.read<MessageCubit>();
 
     final chat = widget.selectedChat;
     if (chat == null) return;
@@ -92,12 +95,12 @@ class _ChatDetailViewState extends State<ChatDetailView> {
     debugPrint("TOKEN: $token");
 
     await cubit.loadMessages(roomId, token);
-    cubit.bindWebSocket(roomId);
+    cubit.bindWebSocket(roomId, widget.controller.webSocketService);
   }
 
   @override
   void dispose() {
-    context.read<MessageCubit>().disconnectSocket();
+    _messageCubit.disconnectSocket(); 
     messageController.dispose();
     super.dispose();
   }

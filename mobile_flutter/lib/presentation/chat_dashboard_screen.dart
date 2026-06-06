@@ -13,22 +13,25 @@ import 'package:mobile_flutter/presentation/widgets/navbar.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
 import 'package:mobile_flutter/presentation/widgets/empty_chat_view.dart';
 import 'package:mobile_flutter/services/websocket_service.dart';
+import 'package:mobile_flutter/controllers/messages_controller.dart';
+import 'package:mobile_flutter/injection.dart';
+
 
 const _kBlue = Color(0xFF2C6BED);
 const _kDarkBg = Color(0xFF121212);
 const _kDarkSurface = Color(0xFF1E1E1E);
 const _kDarkCard = Color(0xFF262626);
 
-class ChatDashboardScreen extends StatefulWidget {
-  const ChatDashboardScreen({super.key});
+class ChatDetailScreen extends StatefulWidget {
+  const ChatDetailScreen({super.key});
 
   @override
-  State<ChatDashboardScreen> createState() => _ChatDashboardScreenState();
+  State<ChatDetailScreen> createState() => _ChatDetailScreenState();
 }
 
-class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
+class _ChatDetailScreenState extends State<ChatDetailScreen> {
   int _selectedIndex = 0;
-  late final ChatDashboardController _controller;
+  late final ChatDetailController _controller;
 
   @override
   void initState() {
@@ -36,13 +39,18 @@ class _ChatDashboardScreenState extends State<ChatDashboardScreen> {
 
     print("INIT STATE JALAN");
 
-    // Initialize controller immediately with shared WebSocketService
+    
     try {
-      final ws = context.read<WebSocketService>();
-      _controller = ChatDashboardController(webSocketService: ws);
-    } catch (_) {
-      _controller = ChatDashboardController();
-    }
+  final cubit = context.read<MessageCubit>();
+  _controller = ChatDetailController(
+    webSocketService: getIt<WebSocketService>(),
+    messageCubit: cubit, 
+  );
+} catch (_) {
+  _controller = ChatDetailController(
+    messageCubit: context.read<MessageCubit>(), 
+  );
+}
     
     _initialize();
   }
