@@ -1,24 +1,15 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mobile_flutter/services/storage_io.dart' if (dart.library.html) 'package:mobile_flutter/services/storage_web.dart';
 import 'register_page.dart';
-<<<<<<< HEAD:mobile_flutter/lib/presentation/auth/login_page.dart
 import '../chat_dashboard_screen.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
-=======
-import 'chat_dashboard_screen.dart';
-import '../theme/theme_controller.dart';
-import '../services/api_client.dart';
->>>>>>> b7253ac (testing http cookie implement):mobile_flutter/lib/presentation/login_page.dart
+import 'package:mobile_flutter/services/api_client_services.dart';
 
-// ─── API (jangan diubah) ──────────────────────────────────────────────────────
-const kBaseUrl = 'http://localhost:8080';
 
-// ─── WARNA ────────────────────────────────────────────────────────────────────
+
 const kSignalBlue       = Color(0xFF2C6BED);
 const kSignalBlueDark   = Color(0xFF1A56D6);
-const kBlueBubble       = Color(0xFFAEC6F6); // gelembung dekorasi terang
+const kBlueBubble       = Color(0xFFAEC6F6);
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -40,72 +31,88 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  // ── LOGIN LOGIC (Menggunakan Dio untuk otomatis simpan HttpOnly Cookie) ──
   Future<void> _login() async {
-    if (_emailCtrl.text.trim().isEmpty || _passwordCtrl.text.isEmpty) {
-      setState(() => _error = 'Email dan password wajib diisi');
-      return;
-    }
-    setState(() { _loading = true; _error = null; });
-    try {
-      final api = ApiClient();
-        final res = await api.dio.post(
-        '/api/auth/login', 
-        data: {
-          'email':    _emailCtrl.text.trim(),
-          'password': _passwordCtrl.text,
-        },
-      );
-      
-      if (res.statusCode == 200) {
-        final data = res.data is String ? jsonDecode(res.data) : res.data;
-        final prefs = await SharedPreferences.getInstance();
-        
-        await prefs.setString('token', data['token'] ?? '');
-        // Simpan email untuk ditampilkan di halaman profil
-        await prefs.setString('email', _emailCtrl.text.trim());
-        if (!mounted) return;
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const ChatDashboardScreen()),
-          (route) => false,
-        );
-      } else {
-        final data = res.data is String ? jsonDecode(res.data) : res.data;
-        setState(() => _error = data['Message'] ?? data['message'] ?? 'Login gagal');
-      }
-    } on DioException catch (e) {
-      if (e.response != null) {
-        final data = e.response!.data is String ? jsonDecode(e.response!.data) : e.response!.data;
-        setState(() => _error = data?['Message'] ?? data?['message'] ?? 'Login gagal');
-      } else {
-        setState(() => _error = 'Terjadi Kesalahan Koneksi.');
-      }
-    } catch (e) {
-      setState(() => _error = 'Terjadi Kesalahan Koneksi.');
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
+  if (_emailCtrl.text.trim().isEmpty || _passwordCtrl.text.isEmpty) {
+    setState(() => _error = 'Email dan password wajib diisi');
+    return;
   }
 
-  // ── BUILD ─────────────────────────────────────────────────────────────────
+  setState(() {
+    _loading = true;
+    _error = null;
+  });
+
+  try {
+    // Perbaikan kurung di sini: sebelumnya ada extra ')' setelah post()
+    final res = await ApiClient().dio.post(
+      '/api/auth/login',
+      data: {
+        'email': _emailCtrl.text.trim(),
+        'password': _passwordCtrl.text,
+      },
+    );
+
+    final data = res.data as Map<String, dynamic>;
+
+    if (res.statusCode == 200) {
+      final accessToken = (data['access_token'] ?? data['token'])?.toString() ?? '';
+      final refreshToken = data['refresh_token']?.toString() ?? '';
+
+      if (accessToken.isEmpty) {
+        setState(() => _error = 'Token login tidak valid');
+        return;
+      }
+
+      await ApiClient().saveTokens(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
+
+      await storageSetString('user_id', data['user_id']?.toString() ?? '');
+      await storageSetString('email', _emailCtrl.text.trim());
+
+      if (!mounted) return;
+      
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const ChatDashboardScreen()),
+        (route) => false,
+      );
+    } else {
+      setState(() => _error = data['Message'] ?? data['message'] ?? 'Login gagal');
+    }
+  } catch (e) {
+    
+    setState(() => _error = 'Terjadi Kesalahan Koneksi.');
+  } finally {
+    if (mounted) setState(() => _loading = false);
+  }
+}
+
   @override
   Widget build(BuildContext context) {
+   
     final isDark = ThemeController.isDark;
-    final bg     = isDark ? const Color(0xFF121212) : Colors.white;
-    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final textColor  = isDark ? Colors.white : const Color(0xFF1B1B1B);
-    final hintColor  = isDark ? Colors.white54 : const Color(0xFF8696A0);
-    final inputFill  = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF3F6FD);
-    final borderColor = isDark ? Colors.white12 : const Color(0xFFD1D7DB);
-    final bubbleA = isDark ? const Color(0xFF1A3A6B) : kSignalBlue;
-    final bubbleB = isDark ? const Color(0xFF0D2040) : kBlueBubble;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final bg = theme.scaffoldBackgroundColor;
+    final cardBg = theme.cardColor;
+    final textColor = colorScheme.onSurface;
+    final hintColor = colorScheme.onSurfaceVariant;
+    final inputFill = colorScheme.surface.withValues(
+      alpha: isDark ? 0.24 : 0.9,
+    );
+    final borderColor = colorScheme.outline.withValues(
+      alpha: isDark ? 0.45 : 0.4,
+    );
+    final bubbleA = colorScheme.primary;
+    final bubbleB = colorScheme.primaryContainer;
+
 
     return Scaffold(
       backgroundColor: bg,
       body: Stack(
         children: [
-          // ── Dekorasi lingkaran atas-kiri ──────────────────────────────
           Positioned(
             top: -80, left: -80,
             child: _bubble(220, bubbleA, opacity: 0.85),
@@ -114,7 +121,6 @@ class _LoginPageState extends State<LoginPage> {
             top: 30, left: -40,
             child: _bubble(120, bubbleB, opacity: 0.5),
           ),
-          // ── Dekorasi lingkaran bawah-kanan ────────────────────────────
           Positioned(
             bottom: -90, right: -80,
             child: _bubble(240, bubbleA, opacity: 0.7),
@@ -124,7 +130,6 @@ class _LoginPageState extends State<LoginPage> {
             child: _bubble(130, bubbleB, opacity: 0.45),
           ),
 
-          // ── Toggle dark/light (pojok kanan atas) ─────────────────────
           SafeArea(
             child: Align(
               alignment: Alignment.topRight,
@@ -135,7 +140,6 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
 
-          // ── Konten utama ──────────────────────────────────────────────
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -147,7 +151,8 @@ class _LoginPageState extends State<LoginPage> {
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(isDark ? 0.4 : 0.08),
+                        color: Colors.black.withValues(
+                        alpha: isDark ? 0.4 : 0.08),
                         blurRadius: 24,
                         offset: const Offset(0, 8),
                       ),
@@ -156,7 +161,6 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Logo
                       Container(
                         width: 70, height: 70,
                         decoration: BoxDecoration(
@@ -168,7 +172,8 @@ class _LoginPageState extends State<LoginPage> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: kSignalBlue.withOpacity(0.4),
+                              color: kSignalBlue.withValues(
+                                alpha :0.4),
                               blurRadius: 16,
                               offset: const Offset(0, 6),
                             )
@@ -179,7 +184,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 18),
 
-                      Text('Signal',
+                      Text('Link',
                           style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w800,
@@ -190,7 +195,6 @@ class _LoginPageState extends State<LoginPage> {
                           style: TextStyle(fontSize: 14, color: hintColor)),
                       const SizedBox(height: 32),
 
-                      // Input email
                       _inputField(
                         controller: _emailCtrl,
                         hint: 'Email',
@@ -204,7 +208,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 14),
 
-                      // Input password
                       _inputField(
                         controller: _passwordCtrl,
                         hint: 'Password',
@@ -226,14 +229,12 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
 
-                      // Error
                       if (_error != null) ...[
                         const SizedBox(height: 12),
                         _errorBox(_error!),
                       ],
                       const SizedBox(height: 24),
 
-                      // Tombol masuk
                       SizedBox(
                         width: double.infinity, height: 52,
                         child: ElevatedButton(
@@ -284,14 +285,15 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+  }
 
-  // ── HELPERS ───────────────────────────────────────────────────────────────
   Widget _bubble(double size, Color color, {double opacity = 1}) => Container(
         width: size,
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: color.withOpacity(opacity),
+          color: color.withValues(
+            alpha : opacity),
         ),
       );
 
@@ -353,9 +355,8 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-}
 
-// ─── WIDGET TOGGLE TEMA ───────────────────────────────────────────────────────
+
 class _ThemeToggle extends StatelessWidget {
   final bool isDark;
   const _ThemeToggle({required this.isDark});

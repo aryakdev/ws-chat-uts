@@ -4,6 +4,8 @@ import (
 	"backend-go/config"
 	"backend-go/model"
 
+	"fmt"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
@@ -14,20 +16,28 @@ import (
 // @Tags         Users
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Success      200  {object}  map[string]interface{} "Success response"
 // @Failure      500  {object}  model.ErrorResponse
 // @Router       /users [get]
 func GetUsers(c *fiber.Ctx) error {
 	var users []model.User
 
-	// ambil user + join profile (buat username)
-	if err := config.DB.Preload("Profile").Find(&users).Error; err != nil {
+	currentUserID := c.Locals("user_id")
+
+	fmt.Println("CURRENT USER ID:", currentUserID)
+
+	if err := config.DB.
+		Preload("Profile").
+		Where("id != ?", currentUserID).
+		Find(&users).Error; err != nil {
+
 		return c.Status(500).JSON(fiber.Map{
 			"message": "Gagal mengambil data user",
 		})
 	}
 
-	var result []model.UserBaseResponse
+	result := make([]model.UserBaseResponse, 0)
 
 	for _, u := range users {
 		result = append(result, model.UserBaseResponse{
@@ -48,6 +58,7 @@ func GetUsers(c *fiber.Ctx) error {
 // @Tags         Users
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        id   path      string  true  "User ID (UUID)"
 // @Success      200  {object}  map[string]interface{} "Success response"
 // @Failure      400  {object}  model.ErrorResponse
@@ -68,6 +79,7 @@ func GetUserByID(c *fiber.Ctx) error {
 	// ambil user + profile
 	if err := config.DB.Preload("Profile").
 		Where("id = ?", userID).
+		Limit(20).
 		First(&user).Error; err != nil {
 
 		return c.Status(404).JSON(fiber.Map{

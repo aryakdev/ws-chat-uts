@@ -1,9 +1,8 @@
-import 'dart:convert';
+// dart:convert removed; ApiClient handles encoding
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:mobile_flutter/services/api_client_services.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
 
-const _kBaseUrl   = 'http://localhost:8080';
 const _kBlue      = Color(0xFF2C6BED);
 const _kBlueDark  = Color(0xFF1A56D6);
 const _kBubbleB   = Color(0xFFAEC6F6);
@@ -50,16 +49,16 @@ class _RegisterPageState extends State<RegisterPage> {
 
     setState(() { _loading = true; _error = null; });
     try {
-      final res = await http.post(
-        Uri.parse('$_kBaseUrl/api/auth/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final res = await ApiClient().post(
+        '/api/auth/register',
+        data: {
           'username': _usernameCtrl.text.trim(),
-          'email':    _emailCtrl.text.trim(),
+          'email': _emailCtrl.text.trim(),
           'password': _passwordCtrl.text,
-        }),
+        },
       );
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
+
+      final data = res.data as Map<String, dynamic>;
       if (res.statusCode == 201) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -70,8 +69,7 @@ class _RegisterPageState extends State<RegisterPage> {
         );
         Navigator.pop(context);
       } else {
-        setState(() =>
-            _error = data['Message'] ?? data['message'] ?? 'Pendaftaran gagal');
+        setState(() => _error = data['Message'] ?? data['message'] ?? 'Pendaftaran gagal');
       }
     } catch (e) {
       setState(() => _error = 'Terjadi Kesalahan Koneksi.');
@@ -153,7 +151,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(isDark ? 0.4 : 0.08),
+                            color: Colors.black.withValues(
+                              alpha : isDark ? 0.4 : 0.08),
                             blurRadius: 24,
                             offset: const Offset(0, 8),
                           ),
@@ -174,7 +173,8 @@ class _RegisterPageState extends State<RegisterPage> {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: _kBlue.withOpacity(0.4),
+                                  color: _kBlue.withValues(
+                                    alpha : 0.4),
                                   blurRadius: 16,
                                   offset: const Offset(0, 6),
                                 )
@@ -308,7 +308,8 @@ class _RegisterPageState extends State<RegisterPage> {
         width: size, height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: color.withOpacity(opacity),
+          color: color.withValues(
+            alpha : opacity),
         ),
       );
 

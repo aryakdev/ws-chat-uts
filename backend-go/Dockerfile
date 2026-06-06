@@ -1,6 +1,6 @@
-FROM golang:1.25-alpine
+# Stage 1: Build
+FROM golang:1.25-alpine AS builder
 
-# Tambahkan ini untuk menghindari masalah download toolchain
 ENV GOPROXY=https://proxy.golang.org,direct
 
 WORKDIR /app
@@ -11,6 +11,13 @@ RUN go mod download
 COPY . .
 
 RUN go build -o main .
+
+# Stage 2: Run
+FROM alpine:latest
+
+WORKDIR /app
+
+COPY --from=builder /app/main .
 
 EXPOSE 8080
 

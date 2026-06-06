@@ -37,7 +37,8 @@ class ChatNavigationRail extends StatelessWidget {
         fontWeight: FontWeight.w600,
       ),
       labelType: NavigationRailLabelType.all,
-      indicatorColor: _kBlue.withOpacity(0.12),
+      indicatorColor: _kBlue.withValues(
+        alpha : 0.12),
       leading: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: GestureDetector(

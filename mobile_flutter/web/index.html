@@ -31,6 +31,10 @@
 
   <title>mobile_flutter</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    // Force HTML renderer for more permissive cross-origin image handling on web.
+    window.flutterWebRenderer = "html";
+  </script>
 </head>
 <body>
   <!--

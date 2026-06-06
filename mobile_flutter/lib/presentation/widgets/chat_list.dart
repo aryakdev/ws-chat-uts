@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_flutter/model/chat_user.dart';
+import 'package:mobile_flutter/model/chat_user_model.dart';
+import 'package:mobile_flutter/utils/date_formatter.dart';
 
 class ChatListView extends StatelessWidget {
   const ChatListView({
@@ -11,9 +12,9 @@ class ChatListView extends StatelessWidget {
   });
 
   final bool isDark;
-  final List<ChatModel> chats;
-  final ValueChanged<ChatModel> onChatSelected;
-  final ChatModel? selectedChat;
+  final List<ChatRoomModel> chats;
+  final ValueChanged<ChatRoomModel> onChatSelected;
+  final ChatRoomModel? selectedChat;
 
   static const _kBlue = Color(0xFF2C6BED);
   static const _kDarkBg = Color(0xFF121212);
@@ -76,7 +77,8 @@ class ChatListView extends StatelessWidget {
                   final isSelected = selectedChat?.id == chat.id;
 
                   return Material(
-                    color: isSelected ? _kBlue.withOpacity(isDark ? 0.18 : 0.08) : Colors.transparent,
+                    color: isSelected ? _kBlue.withValues(
+                      alpha : isDark ? 0.18 : 0.08) : Colors.transparent,
                     child: ListTile(
                       onTap: () => onChatSelected(chat),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -96,11 +98,17 @@ class ChatListView extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            chat.time,
+                            chat.lastMessage != null
+                                ? formatTime(chat.lastMessage!.createdAt)
+                                : "",
                             style: TextStyle(
-                              color: chat.unreadCount > 0 ? _kBlue : subColor,
+                              color: chat.unreadCount > 0
+                                  ? _kBlue
+                                  : subColor,
                               fontSize: 12,
-                              fontWeight: chat.unreadCount > 0 ? FontWeight.w600 : FontWeight.normal,
+                              fontWeight: chat.unreadCount > 0
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
                             ),
                           ),
                         ],
@@ -109,8 +117,13 @@ class ChatListView extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              chat.lastMessage,
-                              style: TextStyle(color: subColor, fontSize: 13),
+                              (chat.lastMessage != null && chat.lastMessage!.content.isNotEmpty)
+                                  ? chat.lastMessage!.content
+                                  : "Belum ada pesan",
+                              style: TextStyle(
+                                color: subColor,
+                                fontSize: 13,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -165,7 +178,8 @@ class _Avatar extends StatelessWidget {
     final color = _colors[name.codeUnitAt(0) % _colors.length];
     return CircleAvatar(
       radius: 26,
-      backgroundColor: color.withOpacity(isDark ? 0.85 : 0.9),
+      backgroundColor: color.withValues(
+        alpha : isDark ? 0.85 : 0.9),
       child: Text(
         name[0].toUpperCase(),
         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18),

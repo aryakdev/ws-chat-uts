@@ -1,5 +1,10 @@
 basePath: /api
 definitions:
+  model.CreateOrGetPrivateRoomRequest:
+    properties:
+      target_user_id:
+        type: string
+    type: object
   model.ErrorResponse:
     properties:
       message:
@@ -14,6 +19,21 @@ definitions:
     required:
     - email
     - password
+    type: object
+  model.MessageResponse:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      room_id:
+        type: string
+      sender_id:
+        type: string
+      type:
+        type: string
     type: object
   model.ProfileResponse:
     properties:
@@ -81,6 +101,29 @@ paths:
       summary: Login User
       tags:
       - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Menghasilkan access token baru menggunakan refresh token dari cookie
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Refresh Access Token
+      tags:
+      - Auth
   /auth/register:
     post:
       consumes:
@@ -105,6 +148,133 @@ paths:
       summary: Daftar User WebSystem
       tags:
       - Auth
+  /chat/private:
+    post:
+      consumes:
+      - application/json
+      description: Check existing private room between users or create new one
+      parameters:
+      - description: Target User ID
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateOrGetPrivateRoomRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get or Create Private Room
+      tags:
+      - Chat
+  /messages:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil semua pesan
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get All Messages
+      tags:
+      - Messages
+  /messages/{room_id}:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil semua pesan berdasarkan room ID
+      parameters:
+      - description: Room ID (UUID)
+        in: path
+        name: room_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get Messages By Room
+      tags:
+      - Messages
+  /profile/avatar:
+    patch:
+      consumes:
+      - multipart/form-data
+      description: Upload dan update avatar user yang sedang login
+      parameters:
+      - description: Avatar Image (jpg/png)
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ProfileResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update Avatar
+      tags:
+      - Profile
   /profile/me:
     get:
       consumes:
@@ -165,6 +335,46 @@ paths:
       summary: Update My Profile
       tags:
       - Profile
+  /profile/update/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Memperbarui username, bio, atau avatar berdasarkan User ID
+      parameters:
+      - description: User UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Profile Data
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Berhasil memperbarui profil
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Format ID atau Request tidak valid
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update User Profile
+      tags:
+      - Profile
   /users:
     get:
       consumes:
@@ -182,6 +392,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Get semua user
       tags:
       - Users
@@ -212,6 +424,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Get detail user
       tags:
       - Users
