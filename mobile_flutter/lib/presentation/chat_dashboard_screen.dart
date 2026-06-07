@@ -1,9 +1,6 @@
-// import 'dart:convert';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import 'package:mobile_flutter/controllers/chat_detail.controller.dart';
 import 'package:mobile_flutter/model/chat_user_model.dart';
 import 'package:mobile_flutter/presentation/settings/setting_page.dart';
@@ -15,7 +12,7 @@ import 'package:mobile_flutter/presentation/widgets/empty_chat_view.dart';
 import 'package:mobile_flutter/services/websocket_service.dart';
 import 'package:mobile_flutter/controllers/messages_controller.dart';
 import 'package:mobile_flutter/injection.dart';
-
+import 'package:mobile_flutter/services/profile_providers.dart';
 
 const _kBlue = Color(0xFF2C6BED);
 const _kDarkBg = Color(0xFF121212);
@@ -36,22 +33,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProfileProvider>().fetchProfile();
+    });
 
-    print("INIT STATE JALAN");
-
-    
     try {
-  final cubit = context.read<MessageCubit>();
-  _controller = ChatDetailController(
-    webSocketService: getIt<WebSocketService>(),
-    messageCubit: cubit, 
-  );
-} catch (_) {
-  _controller = ChatDetailController(
-    messageCubit: context.read<MessageCubit>(), 
-  );
-}
-    
+      final cubit = context.read<MessageCubit>();
+      _controller = ChatDetailController(
+        webSocketService: getIt<WebSocketService>(),
+        messageCubit: cubit, 
+      );
+    } catch (_) {
+      _controller = ChatDetailController(
+        messageCubit: context.read<MessageCubit>(), 
+      );
+    }
     _initialize();
   }
 
@@ -96,9 +92,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           builder: (_) => ChatDetailView(
             isDark: ThemeController.isDark,
             selectedChat: chat,
-            // roomId: roomId,
             controller: _controller,
-            
           ),
         ),
       );
@@ -109,6 +103,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final profileProv = context.watch<ProfileProvider>();
+
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeController.themeNotifier,
       builder: (_, __, ___) {
@@ -120,7 +116,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
             return Scaffold(
               backgroundColor: isDark ? _kDarkBg : const Color(0xFFF2F2F7),
-              appBar: isDesktop ? null : _buildMobileAppBar(isDark),
+              appBar: isDesktop ? null : _buildMobileAppBar(isDark, profileProv),
               body: isDesktop ? _buildDesktopLayout(isDark) : _buildMobileBody(isDark),
               bottomNavigationBar: isDesktop ? null : _buildMobileBottomNavigation(isDark),
             );
@@ -158,7 +154,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           ? ChatDetailView(
                               isDark: isDark,
                               selectedChat: _controller.selectedChat,
-                              // roomId: _controller.selectedRoomId!,
                               controller: _controller,
                             )
                           : EmptyChatView(isDark: isDark),
@@ -181,9 +176,13 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  PreferredSizeWidget _buildMobileAppBar(bool isDark) {
+  PreferredSizeWidget _buildMobileAppBar(bool isDark, ProfileProvider profileProv) {
     final appBarBg = isDark ? _kDarkSurface : Colors.white;
     final titleColor = isDark ? Colors.white : const Color(0xFF1B1B1B);
+    
+    final avatarUrl = profileProv.avatar;
+    final username = profileProv.username ?? "";
+    final initial = username.isNotEmpty ? username[0].toUpperCase() : "?";
 
     return AppBar(
       backgroundColor: appBarBg,
@@ -195,11 +194,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
           onTap: _openSettings,
           child: CircleAvatar(
             backgroundColor: isDark ? _kDarkCard : const Color(0xFFE8EDF5),
-            child: Icon(CupertinoIcons.person_fill, color: isDark ? Colors.white54 : _kBlue, size: 18),
+            backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
+            child: (avatarUrl == null || avatarUrl.isEmpty)
+                ? Text(initial, style: TextStyle(color: isDark ? Colors.white54 : _kBlue, fontWeight: FontWeight.bold))
+                : null,
           ),
         ),
       ),
-      title: Text('Signal', style: TextStyle(fontWeight: FontWeight.w800, color: titleColor, fontSize: 20)),
+      title: Text('Chatup', style: TextStyle(fontWeight: FontWeight.w800, color: titleColor, fontSize: 20)),
       actions: [
         IconButton(onPressed: () {}, icon: const Icon(CupertinoIcons.camera, color: _kBlue, size: 22)),
         IconButton(onPressed: () {}, icon: const Icon(CupertinoIcons.pencil, color: _kBlue, size: 20)),

@@ -77,12 +77,11 @@ class ChatListView extends StatelessWidget {
                   final isSelected = selectedChat?.id == chat.id;
 
                   return Material(
-                    color: isSelected ? _kBlue.withValues(
-                      alpha : isDark ? 0.18 : 0.08) : Colors.transparent,
+                    color: isSelected ? _kBlue.withValues(alpha: isDark ? 0.18 : 0.08) : Colors.transparent,
                     child: ListTile(
                       onTap: () => onChatSelected(chat),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      leading: _Avatar(name: chat.name, isDark: isDark),
+                      leading: _Avatar(name: chat.name, avatar: chat.avatarUrl, isDark: isDark),
                       title: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -98,17 +97,11 @@ class ChatListView extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            chat.lastMessage != null
-                                ? formatTime(chat.lastMessage!.createdAt)
-                                : "",
+                            chat.lastMessage != null ? formatTime(chat.lastMessage!.createdAt) : "",
                             style: TextStyle(
-                              color: chat.unreadCount > 0
-                                  ? _kBlue
-                                  : subColor,
+                              color: chat.unreadCount > 0 ? _kBlue : subColor,
                               fontSize: 12,
-                              fontWeight: chat.unreadCount > 0
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
+                              fontWeight: chat.unreadCount > 0 ? FontWeight.w600 : FontWeight.normal,
                             ),
                           ),
                         ],
@@ -159,9 +152,10 @@ class ChatListView extends StatelessWidget {
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.name, required this.isDark});
+  const _Avatar({required this.name, this.avatar, required this.isDark});
 
   final String name;
+  final String? avatar;
   final bool isDark;
 
   static const _colors = [
@@ -175,15 +169,17 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _colors[name.codeUnitAt(0) % _colors.length];
+    final color = _colors[name.isEmpty ? 0 : name.codeUnitAt(0) % _colors.length];
     return CircleAvatar(
       radius: 26,
-      backgroundColor: color.withValues(
-        alpha : isDark ? 0.85 : 0.9),
-      child: Text(
-        name[0].toUpperCase(),
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18),
-      ),
+      backgroundColor: color.withValues(alpha: isDark ? 0.85 : 0.9),
+      backgroundImage: (avatar != null && avatar!.isNotEmpty) ? NetworkImage(avatar!) : null,
+      child: (avatar == null || avatar!.isEmpty)
+          ? Text(
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18),
+            )
+          : null,
     );
   }
 }

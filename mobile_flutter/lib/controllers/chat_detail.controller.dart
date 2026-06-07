@@ -12,7 +12,6 @@ class ChatDetailController {
     required this.messageCubit, 
   }) : _webSocketService = webSocketService ?? WebSocketService();
 
-
   final WebSocketService _webSocketService;
   final MessageCubit messageCubit;
   
@@ -35,22 +34,21 @@ class ChatDetailController {
     debugPrint(
       "Controller receive message : $message"
     );
-    
   }
 
   void sendMessage({
-  required String content,
-}) {
-  if (selectedRoomId == null) {
-    debugPrint("Room belum dipilih");
-    return;
-  }
+    required String content,
+  }) {
+    if (selectedRoomId == null) {
+      debugPrint("Room belum dipilih");
+      return;
+    }
 
-  _webSocketService.sendMessage(
-    roomId: selectedRoomId!,
-    content: content,
-  );
-}
+    _webSocketService.sendMessage(
+      roomId: selectedRoomId!,
+      content: content,
+    );
+  }
 
   Future<void> fetchUsers() async {
     try {
@@ -61,9 +59,15 @@ class ChatDetailController {
         final List users = json['data'];
 
         chats = users.map<ChatRoomModel>((user) {
+          String avatar = user['avatar']?.toString() ?? 
+                          user['avatar_url']?.toString() ?? 
+                          user['avatarUrl']?.toString() ?? 
+                          '';
+
           return ChatRoomModel(
             id: user['id'].toString(),
             name: user['username'],
+            avatarUrl: avatar,
           );
         }).toList();
 
@@ -76,25 +80,24 @@ class ChatDetailController {
   }
 
   Future<String?> openRoom(ChatRoomModel chat) async {
-  debugPrint("OPEN ROOM START: ${chat.id}");
+    debugPrint("OPEN ROOM START: ${chat.id}");
 
-  await _webSocketService.reconnectIfNeeded();
+    await _webSocketService.reconnectIfNeeded();
 
-  final roomId = await ChatService().createPrivateService(
-    targetUserId: chat.id,
-  );
+    final roomId = await ChatService().createPrivateService(
+      targetUserId: chat.id,
+    );
 
-  debugPrint("ROOM ID FROM SERVER: $roomId");
+    debugPrint("ROOM ID FROM SERVER: $roomId");
 
-  selectedChat = chat;
-  selectedRoomId = roomId;
+    selectedChat = chat;
+    selectedRoomId = roomId;
 
-  debugPrint("SELECTED ROOM SET: $selectedRoomId");
+    debugPrint("SELECTED ROOM SET: $selectedRoomId");
 
-  return roomId;
-}
+    return roomId;
+  }
   
-
   void clearSelectedChat() {
     selectedChat = null;
   }
