@@ -22,15 +22,15 @@ class WebSocketService {
 
   Future<void> initWS() async {
     try {
-      debugPrint('🌐 WebSocketService($_instanceId).initWS() called - creating new connection');
+      debugPrint(' WebSocketService($_instanceId).initWS() called - creating new connection');
 
       
       await _subscription?.cancel();
       _subscription = null;
-      debugPrint('✅ Old subscription cancelled');
+      debugPrint('Old subscription cancelled');
       
       final accessToken = ApiClient().accessToken;
-      debugPrint('🔑 Token saat initWS: $accessToken');
+      debugPrint(' Token saat initWS: $accessToken');
 
       final wsBase = ApiClient().baseUrl
         .replaceFirst('http://', 'ws://')
@@ -41,7 +41,7 @@ class WebSocketService {
           : "$wsBase/ws";
 
       final wsUrl = Uri.parse(wsString);
-      debugPrint('🌐 WebSocketService($_instanceId) connecting to: $wsUrl');
+      debugPrint(' WebSocketService($_instanceId) connecting to: $wsUrl');
 
       if (kIsWeb) {
         _channel = WebSocketChannel.connect(wsUrl);
@@ -56,7 +56,7 @@ class WebSocketService {
         );
       }
 
-      debugPrint('🌐 WebSocketService($_instanceId) connected successfully');
+      debugPrint(' WebSocketService($_instanceId) connected successfully');
       
       // Register listener only once per channel
       _subscription = _channel?.stream.listen(
@@ -110,7 +110,6 @@ class WebSocketService {
     _channel?.sink.add(jsonEncode(payload));
   }
 
-  /// Send a join action to subscribe this connection to a room on the server
   void sendJoin(String roomId) {
     if (_channel == null) {
       debugPrint('Cannot send join, channel not ready');
@@ -125,7 +124,6 @@ class WebSocketService {
     _channel?.sink.add(jsonEncode(payload));
   }
 
-  /// Send a leave action to unsubscribe this connection from a room on the server
   void sendLeave(String roomId) {
     if (_channel == null) {
       debugPrint('Cannot send leave, channel not ready');
@@ -151,12 +149,12 @@ class WebSocketService {
 
 
   void disconnect() {
-    debugPrint('❌ WebSocketService($_instanceId) disconnecting...');
+    debugPrint('WebSocketService($_instanceId) disconnecting...');
     _subscription?.cancel();
     _subscription = null;
     _channel?.sink.close();
     _channel = null;
-    debugPrint('❌ WebSocketService($_instanceId) disconnected');
+    debugPrint('WebSocketService($_instanceId) disconnected');
   }
 
   

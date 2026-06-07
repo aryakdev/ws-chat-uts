@@ -4,7 +4,7 @@ import 'package:mobile_flutter/services/api_client_services.dart';
 import 'package:mobile_flutter/services/chat_service.dart';
 import 'package:mobile_flutter/services/websocket_service.dart';
 import 'package:mobile_flutter/controllers/messages_controller.dart';
-import 'dart:convert';
+// import 'dart:convert';
 
 class ChatDetailController {
   ChatDetailController({
