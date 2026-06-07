@@ -5,7 +5,7 @@ import 'package:mobile_flutter/model/chat_user_model.dart';
 import 'package:mobile_flutter/presentation/widgets/empty_chat_view.dart';
 import 'package:mobile_flutter/controllers/chat_detail.controller.dart';
 import 'package:mobile_flutter/controllers/messages_controller.dart';
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ChatDetailView extends StatefulWidget {
@@ -18,7 +18,7 @@ class ChatDetailView extends StatefulWidget {
 
   final bool isDark;
   final ChatRoomModel? selectedChat;
-  final ChatDashboardController controller;
+  final ChatDetailController controller;
   static const _kDarkBg = Color(0xFF121212);
   static const _kDarkSurface = Color(0xFF1E1E1E);
 
@@ -34,10 +34,8 @@ class _ChatDetailViewState extends State<ChatDetailView> {
   @override
   void didUpdateWidget(covariant ChatDetailView oldWidget) {
     super.didUpdateWidget(oldWidget);
-
     final oldId = oldWidget.selectedChat?.id;
     final newId = widget.selectedChat?.id;
-
     if (oldId != newId && widget.selectedChat != null) {
       _initializeChat(widget.selectedChat!);
     }
@@ -47,16 +45,15 @@ class _ChatDetailViewState extends State<ChatDetailView> {
   void initState() {
     super.initState();
     _messageCubit = context.read<MessageCubit>();
-
     final chat = widget.selectedChat;
     if (chat == null) return;
-
     _initializeChat(chat);
   }
 
   Future<void> _initializeChat(ChatRoomModel chat) async {
-    _messageCubit.reset();
-    final token = await ApiClient().getAccessToken() ?? '';
+    final cubit = context.read<MessageCubit>();
+    cubit.reset();
+    final token = ApiClient().accessToken ?? '';
 
     if (token.isNotEmpty) {
       try {
@@ -71,24 +68,19 @@ class _ChatDetailViewState extends State<ChatDetailView> {
             });
           }
         }
-      } catch (e) {
-        debugPrint("Decode Error: $e");
-      }
+      } catch (e) {}
     }
 
     final roomId = await widget.controller.openRoom(chat);
+    if (roomId == null) return;
 
-    if (roomId == null) {
-      return;
-    }
-
-    await _messageCubit.loadMessages(roomId, token);
-    _messageCubit.bindWebSocket(roomId);
+    await cubit.loadMessages(roomId, token);
+    cubit.bindWebSocket(roomId, widget.controller.webSocketService);
   }
 
   @override
   void dispose() {
-    _messageCubit.disconnectSocket();
+    _messageCubit.disconnectSocket(); 
     messageController.dispose();
     super.dispose();
   }
@@ -147,15 +139,8 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                     IconButton(
                       onPressed: () {
                         final text = messageController.text.trim();
-
-                        if (text.isEmpty) {
-                          return;
-                        }
-
-                        widget.controller.sendMessage(
-                          content: text,
-                        );
-
+                        if (text.isEmpty) return;
+                        widget.controller.sendMessage(content: text);
                         messageController.clear();
                       },
                       icon: const Icon(CupertinoIcons.paperplane_fill),
@@ -182,7 +167,6 @@ class _ChatDetailViewState extends State<ChatDetailView> {
     final surfaceBg = widget.isDark ? ChatDetailView._kDarkSurface : Colors.white;
     final textColor = widget.isDark ? Colors.white : const Color(0xFF1B1B1B);
     final subColor = widget.isDark ? Colors.white54 : Colors.grey;
-
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Scaffold(
@@ -211,7 +195,8 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                           ),
                         CircleAvatar(
                           radius: 22,
-                          child: Text(widget.selectedChat!.name[0].toUpperCase()),
+                          backgroundImage: (widget.selectedChat!.avatarUrl.isNotEmpty) ? NetworkImage(widget.selectedChat!.avatarUrl) : null,
+                          child: (widget.selectedChat!.avatarUrl.isEmpty) ? Text(widget.selectedChat!.name[0].toUpperCase()) : null,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -242,7 +227,6 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                             child: CircularProgressIndicator(),
                           );
                         }
-
                         if (state.messages.isEmpty) {
                           return Center(
                             child: Column(
@@ -250,10 +234,11 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                               children: [
                                 CircleAvatar(
                                   radius: 50,
-                                  child: Text(
+                                  backgroundImage: (widget.selectedChat!.avatarUrl.isNotEmpty) ? NetworkImage(widget.selectedChat!.avatarUrl) : null,
+                                  child: (widget.selectedChat!.avatarUrl.isEmpty) ? Text(
                                     widget.selectedChat!.name[0].toUpperCase(),
                                     style: const TextStyle(fontSize: 24),
-                                  ),
+                                  ) : null,
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
@@ -276,7 +261,6 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                             ),
                           );
                         }
-
                         return ListView.builder(
                           reverse: true,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -304,11 +288,11 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                                   decoration: BoxDecoration(
                                     color: isCurrentUser
                                         ? (widget.isDark
-                                            ? Colors.blue.shade700
-                                            : Colors.blue.shade500)
+                                            ? const Color(0xFF1976D2)
+                                            : const Color(0xFF2196F3))
                                         : (widget.isDark
                                             ? const Color(0xFF2A2A2A)
-                                            : Colors.grey.shade300),
+                                            : const Color(0xFFE0E0E0)),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Column(
@@ -355,19 +339,11 @@ class _ChatDetailViewState extends State<ChatDetailView> {
   String _formatTime(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
-
-    if (difference.inMinutes < 1) {
-      return "now";
-    } else if (difference.inHours < 1) {
-      return "${difference.inMinutes}m ago";
-    } else if (difference.inDays < 1) {
-      return "${difference.inHours}h ago";
-    } else if (difference.inDays == 1) {
-      return "yesterday";
-    } else if (difference.inDays < 7) {
-      return "${difference.inDays}d ago";
-    } else {
-      return "${dateTime.day}/${dateTime.month}/${dateTime.year}";
-    }
+    if (difference.inMinutes < 1) return "now";
+    if (difference.inHours < 1) return "${difference.inMinutes}m ago";
+    if (difference.inDays < 1) return "${difference.inHours}h ago";
+    if (difference.inDays == 1) return "yesterday";
+    if (difference.inDays < 7) return "${difference.inDays}d ago";
+    return "${dateTime.day}/${dateTime.month}/${dateTime.year}";
   }
 }

@@ -76,29 +76,18 @@ class MessageCubit extends Cubit<MessageState> {
   emit(state.copyWith(messages: [], isLoading: false));
 }
 
-  void bindWebSocket(String roomId) {
-  final alreadyHadWs = _ws != null;
-
-  if (!alreadyHadWs) {
-    _ws = WebSocketService();
-  }
+  void bindWebSocket(String roomId, WebSocketService ws) {
+  _ws = ws; 
 
   _ws!.onMessage = (raw) {
     final data = jsonDecode(raw);
     final message = MessageModel.fromJson(data);
-
     if (message.roomId == roomId) {
       addRealtimeMessage(message);
     }
   };
 
-  if (alreadyHadWs) {
-    debugPrint('🔄 Reusing existing WebSocket instance for room: $roomId');
-    _ws!.reconnectIfNeeded();
-  } else {
-    debugPrint('🆕 Creating and initializing new WebSocket instance for room: $roomId');
-    _ws!.initWS();
-  }
+  debugPrint('🔄 WebSocket bound to room: $roomId');
 }
 
     void disconnectSocket() {

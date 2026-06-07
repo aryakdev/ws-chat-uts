@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_flutter/domain/repositories/profile_repository.dart';
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
 import 'package:http_parser/http_parser.dart';
 
 class ProfileService implements ProfileRepository {
@@ -23,11 +23,6 @@ class ProfileService implements ProfileRepository {
     }
 
     final bytes = await file.readAsBytes();
-    
-    // Cegah pengiriman file kosong dari browser
-    if (bytes.isEmpty) {
-      throw Exception("File gambar rusak atau kosong (0 bytes)!");
-    }
 
     final formData = FormData.fromMap({
       "avatar": MultipartFile.fromBytes(
@@ -49,19 +44,35 @@ class ProfileService implements ProfileRepository {
         if (responseData is Map<String, dynamic>) {
           String? avatarUrl = responseData['avatar']?.toString();
 
+          if ((avatarUrl == null || avatarUrl.isEmpty) && responseData['data'] != null) {
+            final nestedData = responseData['data'];
+            if (nestedData is Map<String, dynamic>) {
+              avatarUrl = nestedData['avatar']?.toString() ??
+                          nestedData['avatar_url']?.toString() ??
+                          nestedData['url']?.toString();
+            }
+          }
+
+          avatarUrl ??= responseData['avatar_url']?.toString() ?? responseData['url']?.toString();
+
           if (avatarUrl != null && avatarUrl.isNotEmpty) {
             return avatarUrl;
           } else {
-            // Ini akan mencetak JSON mentah dari server Go ke layar
-            throw Exception("Go Sukses, tapi URL Cloudinary kosong! RAW: $responseData");
+            throw Exception("Server Go sukses, tapi Cloudinary gagal memproses gambar (URL Kosong).");
           }
         }
       }
-      throw Exception("Respon server aneh: ${response.data}");
+      throw Exception("Respon server tidak dikenali: ${response.data}");
     } on DioException catch (e) {
       String errorMsg = e.message ?? "Error tidak diketahui";
+      
       if (e.response != null && e.response?.data != null) {
-        errorMsg = e.response?.data['message']?.toString() ?? e.response!.data.toString();
+        final responseData = e.response?.data;
+        if (responseData is Map) {
+          errorMsg = responseData['message']?.toString() ?? responseData.toString();
+        } else {
+          errorMsg = responseData.toString();
+        }
       }
       throw Exception("Ditolak Server: $errorMsg");
     } catch (e) {

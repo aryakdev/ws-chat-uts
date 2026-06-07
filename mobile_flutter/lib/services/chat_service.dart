@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
+import 'package:flutter/foundation.dart';
 
 class ChatService {
   final Dio _dio;
@@ -15,28 +16,26 @@ class ChatService {
         data: {'target_user_id': targetUserId},
       );
 
-      final roomId = response.data['room_id']?.toString();
+      debugPrint("=== CREATE PRIVATE ROOM RESPONSE: ${response.data}");
 
-      // tambahan penting untuk lihat flow backend
+      final roomId = response.data['room_id']?.toString();
       final status = response.data['status'];
+
       if (status != null) {
-        // expected: "created" | "existing"
       } else {
       }
 
       if (roomId == null || roomId.isEmpty) {
         throw Exception('room_id is missing from response');
       }
-   
 
       return roomId;
     } on DioException catch (e) {
-      print(" [DIO ERROR]");
-      print("Status: ${e.response?.statusCode}");
-      print("Data: ${e.response?.data}");
+      debugPrint("[DIO ERROR] Status: ${e.response?.statusCode}");
+      debugPrint("[DIO ERROR] Data: ${e.response?.data}");
       rethrow;
     } catch (e) {
-      print(" [UNKNOWN ERROR] $e");
+      debugPrint("[UNKNOWN ERROR] $e");
       rethrow;
     }
   }

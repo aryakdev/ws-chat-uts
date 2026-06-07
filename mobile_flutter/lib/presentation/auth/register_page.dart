@@ -1,6 +1,6 @@
 // dart:convert removed; ApiClient handles encoding
 import 'package:flutter/material.dart';
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
 
 const _kBlue      = Color(0xFF2C6BED);

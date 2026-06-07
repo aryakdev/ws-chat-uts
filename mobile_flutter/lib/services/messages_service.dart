@@ -1,4 +1,4 @@
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
 import '../model/message_model.dart';
 import '../domain/repositories/message_repository.dart';
 

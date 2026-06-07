@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:mobile_flutter/services/profile_providers.dart';
-import 'package:mobile_flutter/theme/theme_controller.dart';
-import 'package:mobile_flutter/presentation/auth/login_page.dart';
+import '../../services/profile_providers.dart';
+import '../../theme/theme_controller.dart';
+import '../auth/login_page.dart';
 import 'package:mobile_flutter/services/storage_io.dart' if (dart.library.html) 'package:mobile_flutter/services/storage_web.dart';
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/controllers/api_client_controllers.dart';
+import 'package:mobile_flutter/injection.dart';
 import 'package:mobile_flutter/presentation/widgets/profile_avatar.dart';
 
 const _kBlue = Color(0xFF2C6BED);
@@ -51,18 +52,9 @@ class _SettingPageState extends State<SettingPage> {
                 bio: bioCtrl.text,
                 avatar: profileProv.avatar ?? '',
               );
-              
               if (!context.mounted) return;
-
               if (success) {
                 Navigator.pop(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Gagal menyimpan profil"),
-                    backgroundColor: Colors.red,
-                  ),
-                );
               }
             },
             child: const Text('Simpan'),
@@ -146,7 +138,7 @@ class _SettingPageState extends State<SettingPage> {
         value: isDark, 
         onChanged: (val) async {
           await ThemeController.setDark(val);
-          setState(() {});
+          setState(() {}); 
         }
       ),
     );
@@ -157,7 +149,7 @@ class _SettingPageState extends State<SettingPage> {
       leading: const Icon(Icons.logout, color: Colors.red),
       title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
       onTap: () async {
-        await ApiClient().logout();
+         getIt<ApiController>().logout();
         await storageRemove('user_id');
         await storageRemove('email');
         if (mounted) Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginPage()), (route) => false);

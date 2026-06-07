@@ -1,14 +1,21 @@
 import 'package:flutter/foundation.dart';
 import 'package:mobile_flutter/model/chat_user_model.dart';
-import 'package:mobile_flutter/services/api_client.dart';
+import 'package:mobile_flutter/services/api_client_services.dart';
 import 'package:mobile_flutter/services/chat_service.dart';
 import 'package:mobile_flutter/services/websocket_service.dart';
+import 'package:mobile_flutter/controllers/messages_controller.dart';
+import 'dart:convert';
 
-class ChatDashboardController {
-  ChatDashboardController({WebSocketService? webSocketService})
-  : _webSocketService = webSocketService ?? WebSocketService();
+class ChatDetailController {
+  ChatDetailController({
+    WebSocketService? webSocketService,
+    required this.messageCubit, 
+  }) : _webSocketService = webSocketService ?? WebSocketService();
 
   final WebSocketService _webSocketService;
+  final MessageCubit messageCubit;
+  
+  WebSocketService get webSocketService => _webSocketService;
 
   ChatRoomModel? selectedChat;
   String? selectedRoomId;
@@ -30,18 +37,18 @@ class ChatDashboardController {
   }
 
   void sendMessage({
-  required String content,
-}) {
-  if (selectedRoomId == null) {
-    debugPrint("Room belum dipilih");
-    return;
-  }
+    required String content,
+  }) {
+    if (selectedRoomId == null) {
+      debugPrint("Room belum dipilih");
+      return;
+    }
 
-  _webSocketService.sendMessage(
-    roomId: selectedRoomId!,
-    content: content,
-  );
-}
+    _webSocketService.sendMessage(
+      roomId: selectedRoomId!,
+      content: content,
+    );
+  }
 
   Future<void> fetchUsers() async {
     try {
@@ -52,9 +59,15 @@ class ChatDashboardController {
         final List users = json['data'];
 
         chats = users.map<ChatRoomModel>((user) {
+          String avatar = user['avatar']?.toString() ?? 
+                          user['avatar_url']?.toString() ?? 
+                          user['avatarUrl']?.toString() ?? 
+                          '';
+
           return ChatRoomModel(
             id: user['id'].toString(),
             name: user['username'],
+            avatarUrl: avatar,
           );
         }).toList();
 
@@ -67,25 +80,24 @@ class ChatDashboardController {
   }
 
   Future<String?> openRoom(ChatRoomModel chat) async {
-  debugPrint("OPEN ROOM START: ${chat.id}");
+    debugPrint("OPEN ROOM START: ${chat.id}");
 
-  await _webSocketService.reconnectIfNeeded();
+    await _webSocketService.reconnectIfNeeded();
 
-  final roomId = await ChatService().createPrivateService(
-    targetUserId: chat.id,
-  );
+    final roomId = await ChatService().createPrivateService(
+      targetUserId: chat.id,
+    );
 
-  debugPrint("ROOM ID FROM SERVER: $roomId");
+    debugPrint("ROOM ID FROM SERVER: $roomId");
 
-  selectedChat = chat;
-  selectedRoomId = roomId;
+    selectedChat = chat;
+    selectedRoomId = roomId;
 
-  debugPrint("SELECTED ROOM SET: $selectedRoomId");
+    debugPrint("SELECTED ROOM SET: $selectedRoomId");
 
-  return roomId;
-}
+    return roomId;
+  }
   
-
   void clearSelectedChat() {
     selectedChat = null;
   }
