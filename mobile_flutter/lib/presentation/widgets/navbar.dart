@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:mobile_flutter/services/profile_providers.dart';
 
 class ChatNavigationRail extends StatelessWidget {
   const ChatNavigationRail({
@@ -23,6 +25,11 @@ class ChatNavigationRail extends StatelessWidget {
   Widget build(BuildContext context) {
     final railBg = isDark ? _kDarkSurface : Colors.white;
     final unselectedColor = isDark ? Colors.white54 : Colors.grey;
+    final profileProv = context.watch<ProfileProvider>();
+    
+    final avatarUrl = profileProv.avatar;
+    final username = profileProv.username ?? "";
+    final initial = username.isNotEmpty ? username[0].toUpperCase() : "?";
 
     return NavigationRail(
       selectedIndex: selectedIndex,
@@ -37,8 +44,7 @@ class ChatNavigationRail extends StatelessWidget {
         fontWeight: FontWeight.w600,
       ),
       labelType: NavigationRailLabelType.all,
-      indicatorColor: _kBlue.withValues(
-        alpha : 0.12),
+      indicatorColor: _kBlue.withValues(alpha : 0.12),
       leading: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: GestureDetector(
@@ -46,11 +52,10 @@ class ChatNavigationRail extends StatelessWidget {
           child: CircleAvatar(
             radius: 22,
             backgroundColor: isDark ? _kDarkCard : const Color(0xFFE8EDF5),
-            child: Icon(
-              CupertinoIcons.person_fill,
-              color: isDark ? Colors.white54 : _kBlue,
-              size: 20,
-            ),
+            backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
+            child: (avatarUrl == null || avatarUrl.isEmpty)
+                ? Text(initial, style: TextStyle(color: isDark ? Colors.white54 : _kBlue, fontWeight: FontWeight.bold))
+                : null,
           ),
         ),
       ),

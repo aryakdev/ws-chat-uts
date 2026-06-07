@@ -3,23 +3,12 @@ package handlers
 import (
 	"backend-go/config"
 	"backend-go/model"
-
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
 
-// GetUsers godoc
-// @Summary      Get semua user
-// @Description  Mengambil daftar semua user (tanpa detail)
-// @Tags         Users
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Success      200  {object}  map[string]interface{} "Success response"
-// @Failure      500  {object}  model.ErrorResponse
-// @Router       /users [get]
 func GetUsers(c *fiber.Ctx) error {
 	var users []model.User
 
@@ -37,12 +26,13 @@ func GetUsers(c *fiber.Ctx) error {
 		})
 	}
 
-	result := make([]model.UserBaseResponse, 0)
+	result := make([]fiber.Map, 0)
 
 	for _, u := range users {
-		result = append(result, model.UserBaseResponse{
-			ID:       u.ID,
-			Username: u.Profile.Username,
+		result = append(result, fiber.Map{
+			"id":       u.ID,
+			"username": u.Profile.Username,
+			"avatar":   u.Profile.Avatar,
 		})
 	}
 
@@ -52,18 +42,6 @@ func GetUsers(c *fiber.Ctx) error {
 	})
 }
 
-// GetUserByID godoc
-// @Summary      Get detail user
-// @Description  Mengambil detail user berdasarkan ID
-// @Tags         Users
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id   path      string  true  "User ID (UUID)"
-// @Success      200  {object}  map[string]interface{} "Success response"
-// @Failure      400  {object}  model.ErrorResponse
-// @Failure      404  {object}  model.ErrorResponse
-// @Router       /users/{id} [get]
 func GetUserByID(c *fiber.Ctx) error {
 	idParam := c.Params("id")
 
@@ -76,7 +54,6 @@ func GetUserByID(c *fiber.Ctx) error {
 
 	var user model.User
 
-	// ambil user + profile
 	if err := config.DB.Preload("Profile").
 		Where("id = ?", userID).
 		Limit(20).
