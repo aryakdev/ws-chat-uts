@@ -1,6 +1,6 @@
 // dart:convert removed; ApiClient handles encoding
 import 'package:flutter/material.dart';
-import 'package:mobile_flutter/services/api_client_services.dart';
+import 'package:mobile_flutter/controllers/register_controller.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
 
 const _kBlue      = Color(0xFF2C6BED);
@@ -14,80 +14,24 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  final _usernameCtrl = TextEditingController();
-  final _emailCtrl    = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  final _confirmCtrl  = TextEditingController();
-  bool _hidePwd     = true;
-  bool _hideConfirm = true;
-  bool _loading     = false;
-  String? _error;
+  final _controller = RegisterController();
 
   @override
   void dispose() {
-    _usernameCtrl.dispose();
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
-    _confirmCtrl.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  // ── REGISTER LOGIC ────────────────────────────────────────────────────────
-  Future<void> _register() async {
-    if (_usernameCtrl.text.trim().isEmpty) {
-      setState(() => _error = 'Username wajib diisi'); return;
-    }
-    if (!_emailCtrl.text.contains('@')) {
-      setState(() => _error = 'Format email tidak valid'); return;
-    }
-    if (_passwordCtrl.text.length < 8) {
-      setState(() => _error = 'Password minimal 8 karakter'); return;
-    }
-    if (_passwordCtrl.text != _confirmCtrl.text) {
-      setState(() => _error = 'Password tidak cocok'); return;
-    }
-
-    setState(() { _loading = true; _error = null; });
-    try {
-      final res = await ApiClient().post(
-        '/api/auth/register',
-        data: {
-          'username': _usernameCtrl.text.trim(),
-          'email': _emailCtrl.text.trim(),
-          'password': _passwordCtrl.text,
-        },
-      );
-
-      final data = res.data as Map<String, dynamic>;
-      if (res.statusCode == 201) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Akun berhasil dibuat! Silakan login.'),
-            backgroundColor: _kBlue,
-          ),
-        );
-        Navigator.pop(context);
-      } else {
-        setState(() => _error = data['Message'] ?? data['message'] ?? 'Pendaftaran gagal');
-      }
-    } catch (e) {
-      setState(() => _error = 'Terjadi Kesalahan Koneksi.');
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  // ── BUILD ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    // Menggunakan ValueListenableBuilder agar UI merespon perubahan themeNotifier
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: ThemeController.themeNotifier,
-      builder: (context, mode, child) {
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) {
+        return ValueListenableBuilder<ThemeMode>(
+          valueListenable: ThemeController.themeNotifier,
+          builder: (context, mode, child) {
         final isDark = mode == ThemeMode.dark;
         
-        // Konstanta warna berdasarkan state isDark
         final bg       = isDark ? const Color(0xFF121212) : Colors.white;
         final cardBg   = isDark ? const Color(0xFF1E1E1E) : Colors.white;
         final text     = isDark ? Colors.white : const Color(0xFF1B1B1B);
@@ -196,7 +140,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               style: TextStyle(fontSize: 13, color: hint)),
                           const SizedBox(height: 28),
 
-                          _field(controller: _usernameCtrl,
+                          _field(controller: _controller.usernameCtrl,
                               hint: 'Username',
                               icon: Icons.person_outline_rounded,
                               action: TextInputAction.next,
@@ -204,7 +148,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               textColor: text, hintColor: hint),
                           const SizedBox(height: 12),
 
-                          _field(controller: _emailCtrl,
+                          _field(controller: _controller.emailCtrl,
                               hint: 'Email',
                               icon: Icons.email_outlined,
                               keyboard: TextInputType.emailAddress,
@@ -213,51 +157,49 @@ class _RegisterPageState extends State<RegisterPage> {
                               textColor: text, hintColor: hint),
                           const SizedBox(height: 12),
 
-                          _field(controller: _passwordCtrl,
+                          _field(controller: _controller.passwordCtrl,
                               hint: 'Password (min. 8 karakter)',
                               icon: Icons.lock_outline_rounded,
-                              obscure: _hidePwd,
+                              obscure: _controller.hidePwd,
                               action: TextInputAction.next,
                               fill: fill, border: border,
                               textColor: text, hintColor: hint,
                               suffix: IconButton(
                                 icon: Icon(
-                                  _hidePwd
+                                  _controller.hidePwd
                                       ? Icons.visibility_off_outlined
                                       : Icons.visibility_outlined,
                                   color: hint, size: 20),
-                                onPressed: () =>
-                                    setState(() => _hidePwd = !_hidePwd),
+                                onPressed: _controller.toggleHidePwd,
                               )),
                           const SizedBox(height: 12),
 
-                          _field(controller: _confirmCtrl,
+                          _field(controller: _controller.confirmCtrl,
                               hint: 'Konfirmasi Password',
                               icon: Icons.lock_outline_rounded,
-                              obscure: _hideConfirm,
+                              obscure: _controller.hideConfirm,
                               fill: fill, border: border,
                               textColor: text, hintColor: hint,
-                              onSubmit: (_) => _register(),
+                              onSubmit: (_) => _controller.register(context),
                               suffix: IconButton(
                                 icon: Icon(
-                                  _hideConfirm
+                                  _controller.hideConfirm
                                       ? Icons.visibility_off_outlined
                                       : Icons.visibility_outlined,
                                   color: hint, size: 20),
-                                onPressed: () =>
-                                    setState(() => _hideConfirm = !_hideConfirm),
+                                onPressed: _controller.toggleHideConfirm,
                               )),
 
-                          if (_error != null) ...[
+                          if (_controller.error != null) ...[
                             const SizedBox(height: 12),
-                            _errorBox(_error!),
+                            _errorBox(_controller.error!),
                           ],
                           const SizedBox(height: 24),
 
                           SizedBox(
                             width: double.infinity, height: 52,
                             child: ElevatedButton(
-                              onPressed: _loading ? null : _register,
+                              onPressed: _controller.loading ? null : () => _controller.register(context),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _kBlue,
                                 foregroundColor: Colors.white,
@@ -265,7 +207,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14)),
                               ),
-                              child: _loading
+                              child: _controller.loading
                                   ? const SizedBox(width: 22, height: 22,
                                       child: CircularProgressIndicator(
                                           strokeWidth: 2.5,
@@ -300,6 +242,8 @@ class _RegisterPageState extends State<RegisterPage> {
             ],
           ),
         );
+      },
+    );
       },
     );
   }
