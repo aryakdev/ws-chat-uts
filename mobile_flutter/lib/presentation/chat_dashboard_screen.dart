@@ -78,10 +78,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Future<void> _onChatSelected(ChatRoomModel chat) async {
-    final roomId = await _controller.openRoom(chat);
-    if (roomId == null) {
-      return;
-    }
+    // BUG #1 FIX: selectChat only stores the selection locally — no HTTP call.
+    // openRoom (the actual API call) is called exactly once inside
+    // ChatDetailView._initializeChat (via initState on mobile, or
+    // didUpdateWidget on desktop).
+    _controller.selectChat(chat);
 
     if (!mounted) return;
     final isMobile = MediaQuery.of(context).size.width < 600;
@@ -150,7 +151,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     ),
                     Expanded(
                       flex: 5,
-                      child: _controller.selectedChat != null && _controller.selectedRoomId != null
+                      // BUG #1 FIX: only check selectedChat — selectedRoomId is set
+                      // asynchronously inside ChatDetailView._initializeChat.
+                      child: _controller.selectedChat != null
                           ? ChatDetailView(
                               isDark: isDark,
                               selectedChat: _controller.selectedChat,

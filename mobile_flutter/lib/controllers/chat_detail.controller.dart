@@ -4,13 +4,14 @@ import 'package:mobile_flutter/services/api_client_services.dart';
 import 'package:mobile_flutter/services/chat_service.dart';
 import 'package:mobile_flutter/services/websocket_service.dart';
 import 'package:mobile_flutter/controllers/messages_controller.dart';
+import 'package:mobile_flutter/injection.dart';
 // import 'dart:convert';
 
 class ChatDetailController {
   ChatDetailController({
     WebSocketService? webSocketService,
     required this.messageCubit, 
-  }) : _webSocketService = webSocketService ?? WebSocketService();
+  }) : _webSocketService = webSocketService ?? getIt<WebSocketService>();
 
   final WebSocketService _webSocketService;
   final MessageCubit messageCubit;
@@ -84,6 +85,12 @@ class ChatDetailController {
 
     await _webSocketService.reconnectIfNeeded();
 
+    // Leave the previous room before joining a new one (BUG #2)
+    if (selectedRoomId != null && selectedRoomId != chat.id) {
+      _webSocketService.sendLeave(selectedRoomId!);
+      debugPrint("LEFT ROOM: $selectedRoomId");
+    }
+
     final roomId = await ChatService().createPrivateService(
       targetUserId: chat.id,
     );
@@ -93,11 +100,24 @@ class ChatDetailController {
     selectedChat = chat;
     selectedRoomId = roomId;
 
+    // Join the new room on the WS Hub (BUG #2)
+    if (roomId != null) {
+      _webSocketService.sendJoin(roomId);
+      debugPrint("JOINED ROOM: $roomId");
+    }
+
     debugPrint("SELECTED ROOM SET: $selectedRoomId");
 
     return roomId;
   }
   
+  /// Sets the selected chat locally WITHOUT making any HTTP call.
+  /// Use this in the dashboard when navigating to a chat —
+  /// openRoom is the single caller that actually hits the API.
+  void selectChat(ChatRoomModel chat) {
+    selectedChat = chat;
+  }
+
   void clearSelectedChat() {
     selectedChat = null;
   }

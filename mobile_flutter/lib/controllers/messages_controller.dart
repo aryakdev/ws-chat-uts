@@ -95,5 +95,11 @@ class MessageCubit extends Cubit<MessageState> {
       _ws = null;
 
       print('🔌 WebSocket disconnected');
-    } 
+    }
+
+    @override
+    Future<void> close() {
+      _ws?.disconnect();
+      return super.close();
+    }
 }

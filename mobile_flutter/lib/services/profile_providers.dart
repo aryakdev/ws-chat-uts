@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_flutter/services/storage_io.dart' if (dart.library.html) 'package:mobile_flutter/services/storage_web.dart';
+import 'package:mobile_flutter/services/storage_io.dart'
+    if (dart.library.html) 'package:mobile_flutter/services/storage_web.dart';
 import 'package:mobile_flutter/services/api_client_services.dart';
 
 class ProfileProvider with ChangeNotifier {
@@ -32,18 +33,30 @@ class ProfileProvider with ChangeNotifier {
   Future<void> fetchProfile() async {
     _isLoading = true;
     notifyListeners();
-
     try {
       final response = await ApiClient().dio.get('/api/profile/me');
       if (response.statusCode == 200) {
-        _username = response.data['username'];
-        _bio = response.data['bio'];
-        _avatar = response.data['avatar'];
+        final data = response.data;
 
-        if (response.data['user_id'] != null) {
-          _userId = response.data['user_id'].toString();
-        } else if (response.data['id'] != null) {
-          _userId = response.data['id'].toString();
+        // Debug: lihat semua field yang dikembalikan server
+        debugPrint("=== PROFILE RESPONSE: $data");
+
+        _username = data['username']?.toString();
+        _bio = data['bio']?.toString();
+
+        // Coba semua kemungkinan nama field avatar dari backend
+        _avatar = data['avatar']?.toString() ??
+            data['avatar_url']?.toString() ??
+            data['avatarUrl']?.toString() ??
+            data['profile_picture']?.toString() ??
+            data['photo']?.toString();
+
+        debugPrint("=== AVATAR URL PARSED: $_avatar");
+
+        if (data['user_id'] != null) {
+          _userId = data['user_id'].toString();
+        } else if (data['id'] != null) {
+          _userId = data['id'].toString();
         }
       }
     } catch (e) {
@@ -54,16 +67,21 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> updateProfile({required String name, required String bio, required String avatar}) async {
+  Future<bool> updateProfile({
+    required String name,
+    required String bio,
+    required String avatar,
+  }) async {
     if (_userId.isEmpty) return false;
-
     try {
-      final response = await ApiClient().dio.patch('/api/profile/update/$_userId', data: {
-        'username': name,
-        'bio': bio,
-        'avatar': avatar,
-      });
-
+      final response = await ApiClient().dio.patch(
+        '/api/profile/update/$_userId',
+        data: {
+          'username': name,
+          'bio': bio,
+          'avatar': avatar,
+        },
+      );
       if (response.statusCode == 200) {
         _username = name;
         _bio = bio;

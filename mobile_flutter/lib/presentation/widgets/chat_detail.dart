@@ -80,7 +80,12 @@ class _ChatDetailViewState extends State<ChatDetailView> {
 
   @override
   void dispose() {
-    _messageCubit.disconnectSocket(); 
+    // BUG #2 FIX: inform server we're leaving this room before disconnecting.
+    final roomId = widget.controller.selectedRoomId;
+    if (roomId != null) {
+      widget.controller.webSocketService.sendLeave(roomId);
+    }
+    _messageCubit.disconnectSocket();
     messageController.dispose();
     super.dispose();
   }
