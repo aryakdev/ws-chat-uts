@@ -33,6 +33,7 @@ type MessageRead struct {
 }
 
 type SendMessageRequest struct {
+	Action  string `json:"action"`
 	RoomID  string `json:"room_id"`
 	Content string `json:"content"`
 	Type    string `json:"type"`

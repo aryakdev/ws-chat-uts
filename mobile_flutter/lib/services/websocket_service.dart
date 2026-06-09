@@ -19,10 +19,16 @@ class WebSocketService {
 
   Future<void> initWS() async {
     try {
+      debugPrint(' WebSocketService($_instanceId).initWS() called - creating new connection');
+
+      
       await _subscription?.cancel();
       _subscription = null;
+      debugPrint('Old subscription cancelled');
       
       final accessToken = ApiClient().accessToken;
+      debugPrint(' Token saat initWS: $accessToken');
+
       final wsBase = ApiClient().baseUrl
         .replaceFirst('http://', 'ws://')
         .replaceFirst('https://', 'wss://');
@@ -32,6 +38,7 @@ class WebSocketService {
           : "$wsBase/ws";
 
       final wsUrl = Uri.parse(wsString);
+      debugPrint(' WebSocketService($_instanceId) connecting to: $wsUrl');
 
       if (kIsWeb) {
         _channel = WebSocketChannel.connect(wsUrl);
@@ -44,6 +51,8 @@ class WebSocketService {
           },
         );
       }
+
+      debugPrint(' WebSocketService($_instanceId) connected successfully');
       
       _subscription = _channel?.stream.listen(
         (message) {
@@ -105,9 +114,11 @@ class WebSocketService {
   }
 
   void disconnect() {
+    debugPrint('WebSocketService($_instanceId) disconnecting...');
     _subscription?.cancel();
     _subscription = null;
     _channel?.sink.close();
     _channel = null;
+    debugPrint('WebSocketService($_instanceId) disconnected');
   }
 }

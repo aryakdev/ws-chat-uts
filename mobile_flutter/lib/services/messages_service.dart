@@ -30,8 +30,4 @@ class MessageService implements MessageRepository {
     final List data = json["data"] ?? [];
     return data.map((e) => MessageModel.fromJson(e)).toList();
   }
-
-  @override
-  Future<void> sendMessage(String roomId, String content, String token) async {
-  }
 }

@@ -80,7 +80,12 @@ class _ChatDetailViewState extends State<ChatDetailView> {
 
   @override
   void dispose() {
-    _messageCubit.disconnectSocket(); 
+    // BUG #2 FIX: inform server we're leaving this room before disconnecting.
+    final roomId = widget.controller.selectedRoomId;
+    if (roomId != null) {
+      widget.controller.webSocketService.sendLeave(roomId);
+    }
+    _messageCubit.disconnectSocket();
     messageController.dispose();
     super.dispose();
   }
@@ -332,18 +337,18 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                   _buildInputBar(),
                 ],
               ),
-      ),
-    );
-  }
+          ),
+        );
+      }
 
-  String _formatTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-    if (difference.inMinutes < 1) return "now";
-    if (difference.inHours < 1) return "${difference.inMinutes}m ago";
-    if (difference.inDays < 1) return "${difference.inHours}h ago";
-    if (difference.inDays == 1) return "yesterday";
-    if (difference.inDays < 7) return "${difference.inDays}d ago";
-    return "${dateTime.day}/${dateTime.month}/${dateTime.year}";
-  }
-}
+      String _formatTime(DateTime dateTime) {
+        final now = DateTime.now();
+        final difference = now.difference(dateTime);
+        if (difference.inMinutes < 1) return "now";
+        if (difference.inHours < 1) return "${difference.inMinutes}m ago";
+        if (difference.inDays < 1) return "${difference.inHours}h ago";
+        if (difference.inDays == 1) return "yesterday";
+        if (difference.inDays < 7) return "${difference.inDays}d ago";
+        return "${dateTime.day}/${dateTime.month}/${dateTime.year}";
+      }
+    }

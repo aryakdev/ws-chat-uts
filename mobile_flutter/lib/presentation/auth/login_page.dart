@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_flutter/services/storage_io.dart' if (dart.library.html) 'package:mobile_flutter/services/storage_web.dart';
+import 'package:mobile_flutter/controllers/login_controller.dart';
 import 'register_page.dart';
-import '../chat_dashboard_screen.dart';
 import 'package:mobile_flutter/theme/theme_controller.dart';
-import 'package:mobile_flutter/services/api_client_services.dart';
-
-
 
 const kSignalBlue       = Color(0xFF2C6BED);
 const kSignalBlueDark   = Color(0xFF1A56D6);
@@ -18,82 +14,21 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailCtrl    = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  bool    _hidePwd = true;
-  bool    _loading = false;
-  String? _error;
+  final _controller = LoginController();
 
   @override
   void dispose() {
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _login() async {
-  if (_emailCtrl.text.trim().isEmpty || _passwordCtrl.text.isEmpty) {
-    setState(() => _error = 'Email dan password wajib diisi');
-    return;
-  }
-
-  setState(() {
-    _loading = true;
-    _error = null;
-  });
-
-  try {
-    // Perbaikan kurung di sini: sebelumnya ada extra ')' setelah post()
-    final res = await ApiClient().dio.post(
-      '/api/auth/login',
-      data: {
-        'email': _emailCtrl.text.trim(),
-        'password': _passwordCtrl.text,
-      },
-    );
-
-    final data = res.data as Map<String, dynamic>;
-
-    if (res.statusCode == 200) {
-      final accessToken = (data['access_token'] ?? data['token'])?.toString() ?? '';
-      final refreshToken = data['refresh_token']?.toString() ?? '';
-
-      if (accessToken.isEmpty) {
-        setState(() => _error = 'Token login tidak valid');
-        return;
-      }
-
-      await ApiClient().saveTokens(
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-      );
-
-      await storageSetString('user_id', data['user_id']?.toString() ?? '');
-      await storageSetString('email', _emailCtrl.text.trim());
-
-      if (!mounted) return;
-      
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const ChatDetailScreen()),
-        (route) => false,
-      );
-    } else {
-      setState(() => _error = data['Message'] ?? data['message'] ?? 'Login gagal');
-    }
-  } catch (e) {
-    
-    setState(() => _error = 'Terjadi Kesalahan Koneksi.');
-  } finally {
-    if (mounted) setState(() => _loading = false);
-  }
-}
-
   @override
   Widget build(BuildContext context) {
-   
-    final isDark = ThemeController.isDark;
-    final theme = Theme.of(context);
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) {
+        final isDark = ThemeController.isDark;
+        final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final bg = theme.scaffoldBackgroundColor;
     final cardBg = theme.cardColor;
@@ -196,7 +131,7 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 32),
 
                       _inputField(
-                        controller: _emailCtrl,
+                        controller: _controller.emailCtrl,
                         hint: 'Email',
                         prefixIcon: Icons.person_outline_rounded,
                         keyboardType: TextInputType.emailAddress,
@@ -209,36 +144,35 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 14),
 
                       _inputField(
-                        controller: _passwordCtrl,
+                        controller: _controller.passwordCtrl,
                         hint: 'Password',
                         prefixIcon: Icons.lock_outline_rounded,
-                        obscure: _hidePwd,
+                        obscure: _controller.hidePwd,
                         fillColor: inputFill,
                         borderColor: borderColor,
                         textColor: textColor,
                         hintColor: hintColor,
-                        onSubmit: (_) => _login(),
+                        onSubmit: (_) => _controller.login(context),
                         suffix: IconButton(
                           icon: Icon(
-                            _hidePwd
+                            _controller.hidePwd
                                 ? Icons.visibility_off_outlined
                                 : Icons.visibility_outlined,
                             color: hintColor, size: 20),
-                          onPressed: () =>
-                              setState(() => _hidePwd = !_hidePwd),
+                          onPressed: _controller.toggleHidePwd,
                         ),
                       ),
 
-                      if (_error != null) ...[
+                      if (_controller.error != null) ...[
                         const SizedBox(height: 12),
-                        _errorBox(_error!),
+                        _errorBox(_controller.error!),
                       ],
                       const SizedBox(height: 24),
 
                       SizedBox(
                         width: double.infinity, height: 52,
                         child: ElevatedButton(
-                          onPressed: _loading ? null : _login,
+                          onPressed: _controller.loading ? null : () => _controller.login(context),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: kSignalBlue,
                             foregroundColor: Colors.white,
@@ -246,7 +180,7 @@ class _LoginPageState extends State<LoginPage> {
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14)),
                           ),
-                          child: _loading
+                          child: _controller.loading
                               ? const SizedBox(width: 22, height: 22,
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2.5,
@@ -284,7 +218,8 @@ class _LoginPageState extends State<LoginPage> {
         ],
       ),
     );
-  }
+      },
+    );
   }
 
   Widget _bubble(double size, Color color, {double opacity = 1}) => Container(
@@ -355,7 +290,7 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-
+}
 
 class _ThemeToggle extends StatelessWidget {
   final bool isDark;

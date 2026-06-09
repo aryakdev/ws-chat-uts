@@ -43,48 +43,74 @@ func HandleWebSocket(conn *websocket.Conn) {
 			continue
 		}
 
-		currentRoomID = req.RoomID
+		switch req.Action {
 
-		WsRegister(conn, req.RoomID, userID)
+		case "join":
+			// Leave old room first if switching rooms
+			if currentRoomID != "" && currentRoomID != req.RoomID {
+				Unregister(conn, currentRoomID, userID)
+				log.Printf("ws: left room=%s user=%s", currentRoomID, userID)
+			}
+			currentRoomID = req.RoomID
+			WsRegister(conn, req.RoomID, userID)
+			log.Printf("ws: joined room=%s user=%s", req.RoomID, userID)
 
-		roomUUID, err := uuid.Parse(req.RoomID)
-		if err != nil {
-			log.Println("Invalid Room ID:", err)
-			continue
-		}
+		case "leave":
+			if currentRoomID == req.RoomID {
+				Unregister(conn, req.RoomID, userID)
+				currentRoomID = ""
+				log.Printf("ws: left room=%s user=%s", req.RoomID, userID)
+			}
 
-		senderUUID, err := uuid.Parse(userID)
-		if err != nil {
-			log.Println("Invalid Sender UUID:", err)
-			continue
-		}
+		case "message":
+			// Only process messages if user has joined a room
+			if currentRoomID == "" {
+				log.Printf("ws: message rejected, user=%s has not joined any room", userID)
+				continue
+			}
 
-		message := model.Message{
-			ChatRoomID: roomUUID,
-			Content:    req.Content,
-			Type:       req.Type,
-			SenderID:   senderUUID,
-		}
+			roomUUID, err := uuid.Parse(req.RoomID)
+			if err != nil {
+				log.Println("Invalid Room ID:", err)
+				continue
+			}
 
-		err = repository.CreateMessage(&message)
-		if err != nil {
-			log.Println("DB Error:", err)
-			continue
-		}
+			senderUUID, err := uuid.Parse(userID)
+			if err != nil {
+				log.Println("Invalid Sender UUID:", err)
+				continue
+			}
 
-		response := model.MessageResponse{
-			ID:        message.ID.String(),
-			RoomID:    message.ChatRoomID.String(),
-			SenderID:  message.SenderID.String(),
-			Content:   message.Content,
-			Type:      message.Type,
-			CreatedAt: message.CreatedAt,
-		}
+			message := model.Message{
+				ChatRoomID: roomUUID,
+				Content:    req.Content,
+				Type:       req.Type,
+				SenderID:   senderUUID,
+			}
 
-		err = BroadcastJSON(req.RoomID, response)
-		if err != nil {
-			log.Println("Broadcast Error:", err)
-			continue
+			err = repository.CreateMessage(&message)
+			if err != nil {
+				log.Println("DB Error:", err)
+				continue
+			}
+
+			response := model.MessageResponse{
+				ID:        message.ID.String(),
+				RoomID:    message.ChatRoomID.String(),
+				SenderID:  message.SenderID.String(),
+				Content:   message.Content,
+				Type:      message.Type,
+				CreatedAt: message.CreatedAt,
+			}
+
+			err = BroadcastJSON(req.RoomID, response)
+			if err != nil {
+				log.Println("Broadcast Error:", err)
+				continue
+			}
+
+		default:
+			log.Printf("ws: unknown action=%q user=%s", req.Action, userID)
 		}
 	}
 }
