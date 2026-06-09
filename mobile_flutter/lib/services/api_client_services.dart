@@ -10,7 +10,7 @@ class ApiClient {
   static const String _refreshTokenKey = 'refresh_token';
 
   late final Dio dio;
-  late final Dio refreshDio; // expose ke ApiController
+  late final Dio refreshDio;
 
   String? accessToken;
   String? refreshToken;
@@ -33,21 +33,13 @@ class ApiClient {
     ));
   }
 
-  String get baseUrl => kIsWeb
-      ? 'http://localhost:8080'
-      : 'http://172.20.10.3:8080';
+  String get baseUrl => "http://54.251.22.74:8080";
 
-  // =========================
-  // INIT - load token dari storage saja
-  // =========================
   Future<void> init() async {
     accessToken = await storageGetString(_accessTokenKey);
     refreshToken = await storageGetString(_refreshTokenKey);
   }
 
-  // =========================
-  // TOKEN STORAGE - hanya simpan/hapus
-  // =========================
   Future<void> saveTokens({
     required String accessToken,
     required String refreshToken,
@@ -66,9 +58,6 @@ class ApiClient {
     await storageRemove(_refreshTokenKey);
   }
 
-  // =========================
-  // HTTP METHODS - pure execution
-  // =========================
   Future<Response> get(String path, {
     Map<String, dynamic>? queryParameters,
     Options? options,
