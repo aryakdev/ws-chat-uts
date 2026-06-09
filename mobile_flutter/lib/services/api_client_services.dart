@@ -33,7 +33,7 @@ class ApiClient {
     ));
   }
 
-  String get baseUrl => "http://54.251.22.74:8080";
+  String get baseUrl => 'http://Alamat_IP_Public_EC2_Kamu';
 
   Future<void> init() async {
     accessToken = await storageGetString(_accessTokenKey);

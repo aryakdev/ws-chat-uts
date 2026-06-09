@@ -1,80 +1,153 @@
-import 'package:dio/dio.dart';
+import 'dart:math' show Random;
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
-import 'storage_io.dart' if (dart.library.html) 'storage_web.dart';
+import 'package:web_socket_channel/io.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'dart:convert';
+import 'package:mobile_flutter/services/api_client_services.dart';
 
-class ApiClient {
-  static final ApiClient _instance = ApiClient._internal();
-  factory ApiClient() => _instance;
+class WebSocketService {
+  WebSocketChannel? _channel;
+  WebSocketChannel? get channel => _channel;
+  
+  StreamSubscription? _subscription;
+  late final String _instanceId;
+  void Function(String message)? onMessage;
 
-  static const String _accessTokenKey = 'access_token';
-  static const String _refreshTokenKey = 'refresh_token';
+  WebSocketService() {
+    _instanceId = Random().nextInt(100000).toString();
+  } 
 
-  late final Dio dio;
-  late final Dio refreshDio;
+  Future<void> initWS() async {
+    try {
+      debugPrint(' WebSocketService($_instanceId).initWS() called - creating new connection');
 
-  String? accessToken;
-  String? refreshToken;
+      await _subscription?.cancel();
+      _subscription = null;
+      debugPrint('Old subscription cancelled');
+      
+      final accessToken = ApiClient().accessToken;
+      debugPrint(' Token saat initWS: $accessToken');
 
-  ApiClient._internal() {
-    dio = Dio(BaseOptions(
-      baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
-      headers: {
-        'accept': 'application/json',
-        'Content-Type': 'application/json',
+      final wsBase = ApiClient().baseUrl
+        .replaceFirst('http://', 'ws://')
+        .replaceFirst('https://', 'wss://');
+      
+      final String wsString = kIsWeb && accessToken != null && accessToken.isNotEmpty
+          ? "$wsBase/ws?token=$accessToken"
+          : "$wsBase/ws";
+
+      final wsUrl = Uri.parse(wsString);
+      debugPrint(' WebSocketService($_instanceId) connecting to: $wsUrl');
+
+      if (kIsWeb) {
+        _channel = WebSocketChannel.connect(wsUrl);
+      } else {
+        _channel = IOWebSocketChannel.connect(
+          wsUrl,
+          headers: {
+            if (accessToken != null && accessToken.isNotEmpty)
+              'Authorization': 'Bearer $accessToken',
+          },
+        );
+      }
+
+      debugPrint(' WebSocketService($_instanceId) connected successfully');
+      
+      _subscription = _channel?.stream.listen(
+      (message) {
+        debugPrint("Pesan masuk WS: $message");
+        onMessage?.call(message);
       },
-    ));
-
-    refreshDio = Dio(BaseOptions(
-      baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
-    ));
+      onError: (error) => debugPrint("Error WS: $error"),
+      onDone: () => debugPrint("Koneksi WS putus."),
+    );
+    } catch (e) {
+      debugPrint(" Gagal WS: $e");
+    }
   }
 
-  String get baseUrl => "http://54.251.22.74:8080";
-
-  Future<void> init() async {
-    accessToken = await storageGetString(_accessTokenKey);
-    refreshToken = await storageGetString(_refreshTokenKey);
+  @visibleForTesting
+  void injectChannel(WebSocketChannel channel) {
+    _subscription?.cancel();
+    _subscription = null;
+    
+    _channel = channel;
+    _subscription = _channel?.stream.listen(
+      (message) {
+        debugPrint("Pesan masuk WS: $message");
+        onMessage?.call(message);
+      },
+      onError: (error) => debugPrint("Error WS: $error"),
+      onDone: () => debugPrint("Koneksi WS putus."),
+    );
   }
 
-  Future<void> saveTokens({
-    required String accessToken,
-    required String refreshToken,
-  }) async {
-    this.accessToken = accessToken;
-    this.refreshToken = refreshToken;
-    await storageSetString(_accessTokenKey, accessToken);
-    await storageSetString(_refreshTokenKey, refreshToken);
+  void sendMessage({
+    required String roomId,
+    required String content,
+  }) {
+    if (_channel == null) {
+      debugPrint(
+        "Gagal kirim, koneksi WebSocket belum siap!",
+      );
+      return;
+    }
+
+    final payload = {
+      "action": "message",
+      "room_id": roomId,
+      "content": content,
+      "type": "text",
+    };
+
+    _channel?.sink.add(jsonEncode(payload));
   }
 
-  Future<void> clearTokens() async {
-    accessToken = null;
-    refreshToken = null;
-    dio.options.headers.remove('Authorization');
-    await storageRemove(_accessTokenKey);
-    await storageRemove(_refreshTokenKey);
+  void sendJoin(String roomId) {
+    if (_channel == null) {
+      debugPrint('Cannot send join, channel not ready');
+      return;
+    }
+
+    final payload = {
+      'action': 'join',
+      'room_id': roomId,
+    };
+
+    _channel?.sink.add(jsonEncode(payload));
   }
 
-  Future<Response> get(String path, {
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-  }) => dio.get(path, queryParameters: queryParameters, options: options);
+  void sendLeave(String roomId) {
+    if (_channel == null) {
+      debugPrint('Cannot send leave, channel not ready');
+      return;
+    }
 
-  Future<Response> post(String path, {
-    dynamic data,
-    Options? options,
-  }) => dio.post(path, data: data, options: options);
+    final payload = {
+      'action': 'leave',
+      'room_id': roomId,
+    };
 
-  Future<Response> put(String path, {
-    dynamic data,
-    Options? options,
-  }) => dio.put(path, data: data, options: options);
+    _channel?.sink.add(jsonEncode(payload));
+  }
 
-  Future<Response> delete(String path, {
-    dynamic data,
-    Options? options,
-  }) => dio.delete(path, data: data, options: options);
+  Future<void> reconnectIfNeeded() async {
+    if (_channel == null) {
+      debugPrint('🔌 WebSocketService($_instanceId) channel was null, reconnecting...');
+      await initWS();
+    } else {
+      debugPrint('✅ WebSocketService($_instanceId) already connected, skipping init');
+    }
+  }
+
+  void disconnect() {
+    debugPrint('WebSocketService($_instanceId) disconnecting...');
+    _subscription?.cancel();
+    _subscription = null;
+    _channel?.sink.close();
+    _channel = null;
+    debugPrint('WebSocketService($_instanceId) disconnected');
+  }
 }
