@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"backend-go/model"
-	"errors"
+	"backend-go/repository"
 
 	"path/filepath"
 	"strings"
@@ -13,7 +13,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 )
@@ -53,11 +52,10 @@ func GetMyProfile(c *fiber.Ctx) error {
 		})
 	}
 
-	var profile model.Profile
+	profile, err := repository.FindProfileByUserID(userID)
+	if err != nil {
 
-	if err := config.DB.Where("user_id = ?", userID).First(&profile).Error; err != nil {
-
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
+		if !repository.IsRecordNotFound(err) {
 			return c.Status(500).JSON(fiber.Map{
 				"message": "Gagal mengambil profil",
 			})
@@ -71,7 +69,7 @@ func GetMyProfile(c *fiber.Ctx) error {
 			Bio:      "Mahasiswa IT Chat App",
 		}
 
-		if errCreate := config.DB.Create(&profile).Error; errCreate != nil {
+		if errCreate := repository.CreateProfile(&profile); errCreate != nil {
 			return c.Status(500).JSON(fiber.Map{
 				"message": "Gagal membuat profil default",
 			})
@@ -110,8 +108,8 @@ func UpdateMyProfile(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "invalid request"})
 	}
 
-	var profile model.Profile
-	if err := config.DB.Where("user_id = ?", userID).First(&profile).Error; err != nil {
+	profile, err := repository.FindProfileByUserID(userID)
+	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"message": "profile tidak ditemukan"})
 	}
 
@@ -125,7 +123,7 @@ func UpdateMyProfile(c *fiber.Ctx) error {
 		profile.Avatar = req.Avatar
 	}
 
-	if err := config.DB.Save(&profile).Error; err != nil {
+	if err := repository.SaveProfile(&profile); err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "gagal update profile"})
 	}
 
@@ -193,11 +191,9 @@ func UpdateAvatar(c *fiber.Ctx) error {
 		})
 	}
 
-	var profile model.Profile
+	profile, err := repository.FindProfileByUserID(userID)
 
-	if err := config.DB.
-		Where("user_id = ?", userID).
-		First(&profile).Error; err != nil {
+	if err != nil {
 
 		return c.Status(404).JSON(fiber.Map{
 			"message": "profile tidak ditemukan",
@@ -239,7 +235,7 @@ func UpdateAvatar(c *fiber.Ctx) error {
 
 	profile.Avatar = avatarURL
 
-	if err := config.DB.Save(&profile).Error; err != nil {
+	if err := repository.SaveProfile(&profile); err != nil {
 
 		return c.Status(500).JSON(fiber.Map{
 			"message": "gagal update avatar di database",
@@ -277,14 +273,14 @@ func UpdateProfileByID(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Format request tidak valid"})
 	}
 
-	var profile model.Profile
-	if err := config.DB.Where("user_id = ?", userID).First(&profile).Error; err != nil {
+	profile, err := repository.FindProfileByUserID(userID)
+	if err != nil {
 		profile = model.Profile{
 			ID:       uuid.New(),
 			UserID:   userID,
 			Username: "User Baru",
 		}
-		config.DB.Create(&profile)
+		repository.CreateProfile(&profile)
 	}
 
 	if strings.TrimSpace(req.Username) != "" {
@@ -297,7 +293,7 @@ func UpdateProfileByID(c *fiber.Ctx) error {
 		profile.Avatar = req.Avatar
 	}
 
-	if err := config.DB.Save(&profile).Error; err != nil {
+	if err := repository.SaveProfile(&profile); err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "Gagal menyimpan update profil"})
 	}
 

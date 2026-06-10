@@ -3,6 +3,7 @@ package handlers
 import (
 	"backend-go/config"
 	"backend-go/model"
+	"backend-go/repository"
 	"strings"
 	"time"
 
@@ -32,7 +33,9 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	var existingUser model.User
-	if err := config.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
+	existingUser, err := repository.FindUserByEmail(req.Email)
+	_ = existingUser
+	if err == nil {
 		return c.Status(409).JSON(fiber.Map{"message": "Email sudah terdaftar"})
 	}
 
@@ -41,16 +44,10 @@ func Register(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Password terlalu panjang"})
 	}
 
-	tx := config.DB.Begin()
-
 	user := model.User{
 		ID:       uuid.New(),
 		Email:    req.Email,
 		Password: string(hashedPassword),
-	}
-	if err := tx.Create(&user).Error; err != nil {
-		tx.Rollback()
-		return c.Status(500).JSON(fiber.Map{"message": "Gagal Membuat User"})
 	}
 	profile := model.Profile{
 		ID:       uuid.New(),
@@ -58,12 +55,15 @@ func Register(c *fiber.Ctx) error {
 		Username: req.Username,
 	}
 
-	if err := tx.Create(&profile).Error; err != nil {
-		tx.Rollback()
-		return c.Status(500).JSON(fiber.Map{"message": "Gagal Membuat Profile User"})
+	failedOperation, err := repository.CreateUserWithProfile(&user, &profile)
+	if err != nil {
+		if failedOperation == "profile" {
+			return c.Status(500).JSON(fiber.Map{"message": "Gagal Membuat Profile User"})
+		}
+
+		return c.Status(500).JSON(fiber.Map{"message": "Gagal Membuat User"})
 	}
 
-	tx.Commit()
 	return c.Status(201).JSON(fiber.Map{"message": "Register berhasil", "user_id": user.ID})
 }
 
@@ -84,7 +84,8 @@ func Login(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "Gagal parsing data"})
 	}
 
-	if err := config.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+	user, err := repository.FindUserByEmail(req.Email)
+	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"message": "Email tidak ditemukan"})
 	}
 
