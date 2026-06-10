@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"backend-go/config"
 	"backend-go/model"
+	"backend-go/repository"
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,16 +10,13 @@ import (
 )
 
 func GetUsers(c *fiber.Ctx) error {
-	var users []model.User
-
 	currentUserID := c.Locals("user_id")
 
 	fmt.Println("CURRENT USER ID:", currentUserID)
 
-	if err := config.DB.
-		Preload("Profile").
-		Where("id != ?", currentUserID).
-		Find(&users).Error; err != nil {
+	users, err := repository.FindUsersExceptCurrentUser(currentUserID)
+
+	if err != nil {
 
 		return c.Status(500).JSON(fiber.Map{
 			"message": "Gagal mengambil data user",
@@ -52,12 +49,9 @@ func GetUserByID(c *fiber.Ctx) error {
 		})
 	}
 
-	var user model.User
+	user, err := repository.FindUserByIDWithProfile(userID)
 
-	if err := config.DB.Preload("Profile").
-		Where("id = ?", userID).
-		Limit(20).
-		First(&user).Error; err != nil {
+	if err != nil {
 
 		return c.Status(404).JSON(fiber.Map{
 			"message": "User tidak ditemukan",

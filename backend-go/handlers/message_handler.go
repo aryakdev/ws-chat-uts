@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"backend-go/config"
 	"backend-go/model"
+	"backend-go/repository"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -19,12 +19,9 @@ import (
 // @Failure      500  {object}  map[string]string
 // @Router       /messages [get]
 func GetMessages(c *fiber.Ctx) error {
-	var messages []model.Message
+	messages, err := repository.GetMessages()
 
-	if err := config.DB.Preload("Sender").
-		Find(&messages).
-		Limit(30).
-		Error; err != nil {
+	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"message": "Gagal mengambil pesan",
 		})
@@ -68,11 +65,9 @@ func GetMessagesByRoom(c *fiber.Ctx) error {
 		})
 	}
 
-	var messages []model.Message
+	messages, err := repository.GetMessagesByRoom(roomID)
 
-	if err := config.DB.Preload("Sender").
-		Where("chat_room_id = ?", roomID).
-		Find(&messages).Error; err != nil {
+	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"message": "Gagal mengambil pesan",
 		})
