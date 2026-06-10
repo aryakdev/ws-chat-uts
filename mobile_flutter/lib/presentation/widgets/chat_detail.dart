@@ -50,7 +50,7 @@ class _ChatDetailViewState extends State<ChatDetailView> {
     _initializeChat(chat);
   }
 
-  Future<void> _initializeChat(ChatRoomModel chat) async {
+  void _initializeChat(ChatRoomModel chat) {
     final cubit = context.read<MessageCubit>();
     cubit.reset();
     final token = ApiClient().accessToken ?? '';
@@ -63,24 +63,21 @@ class _ChatDetailViewState extends State<ChatDetailView> {
           String payload = utf8.decode(base64Url.decode(normalized));
           Map<String, dynamic> payloadMap = jsonDecode(payload);
           if (payloadMap['user_id'] != null) {
-            setState(() {
-              currentUserId = payloadMap['user_id'].toString().trim().toLowerCase();
-            });
+            currentUserId = payloadMap['user_id'].toString().trim().toLowerCase();
           }
         }
       } catch (e) {}
     }
 
-    final roomId = await widget.controller.openRoom(chat);
-    if (roomId == null) return;
-
-    await cubit.loadMessages(roomId, token);
-    cubit.bindWebSocket(roomId, widget.controller.webSocketService);
+    widget.controller.openRoom(chat).then((roomId) {
+      if (roomId == null) return;
+      cubit.loadMessages(roomId, token);
+      cubit.bindWebSocket(roomId, widget.controller.webSocketService);
+    });
   }
 
   @override
   void dispose() {
-    // BUG #2 FIX: inform server we're leaving this room before disconnecting.
     final roomId = widget.controller.selectedRoomId;
     if (roomId != null) {
       widget.controller.webSocketService.sendLeave(roomId);
@@ -337,18 +334,18 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                   _buildInputBar(),
                 ],
               ),
-          ),
-        );
-      }
+      ),
+    );
+  }
 
-      String _formatTime(DateTime dateTime) {
-        final now = DateTime.now();
-        final difference = now.difference(dateTime);
-        if (difference.inMinutes < 1) return "now";
-        if (difference.inHours < 1) return "${difference.inMinutes}m ago";
-        if (difference.inDays < 1) return "${difference.inHours}h ago";
-        if (difference.inDays == 1) return "yesterday";
-        if (difference.inDays < 7) return "${difference.inDays}d ago";
-        return "${dateTime.day}/${dateTime.month}/${dateTime.year}";
-      }
-    }
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    if (difference.inMinutes < 1) return "now";
+    if (difference.inHours < 1) return "${difference.inMinutes}m ago";
+    if (difference.inDays < 1) return "${difference.inHours}h ago";
+    if (difference.inDays == 1) return "yesterday";
+    if (difference.inDays < 7) return "${difference.inDays}d ago";
+    return "${dateTime.day}/${dateTime.month}/${dateTime.year}";
+  }
+}

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mobile_flutter/controllers/chat_detail.controller.dart';
 import 'package:mobile_flutter/model/chat_user_model.dart';
 import 'package:mobile_flutter/presentation/settings/setting_page.dart';
@@ -14,20 +15,38 @@ import 'package:mobile_flutter/controllers/messages_controller.dart';
 import 'package:mobile_flutter/injection.dart';
 import 'package:mobile_flutter/services/profile_providers.dart';
 
-const _kBlue = Color(0xFF2C6BED);
-const _kDarkBg = Color(0xFF121212);
-const _kDarkSurface = Color(0xFF1E1E1E);
-const _kDarkCard = Color(0xFF262626);
+class DashboardState {
+  final int selectedIndex;
+  final int rebuildTrigger;
+  DashboardState(this.selectedIndex, this.rebuildTrigger);
+}
 
-class ChatDetailScreen extends StatefulWidget {
+class DashboardCubit extends Cubit<DashboardState> {
+  DashboardCubit() : super(DashboardState(0, 0));
+  void setIndex(int index) => emit(DashboardState(index, state.rebuildTrigger));
+  void triggerRebuild() => emit(DashboardState(state.selectedIndex, state.rebuildTrigger + 1));
+}
+
+class ChatDetailScreen extends StatelessWidget {
   const ChatDetailScreen({super.key});
 
   @override
-  State<ChatDetailScreen> createState() => _ChatDetailScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => DashboardCubit(),
+      child: const _ChatDetailScreenContent(),
+    );
+  }
 }
 
-class _ChatDetailScreenState extends State<ChatDetailScreen> {
-  int _selectedIndex = 0;
+class _ChatDetailScreenContent extends StatefulWidget {
+  const _ChatDetailScreenContent();
+
+  @override
+  State<_ChatDetailScreenContent> createState() => _ChatDetailScreenContentState();
+}
+
+class _ChatDetailScreenContentState extends State<_ChatDetailScreenContent> {
   late final ChatDetailController _controller;
 
   @override
@@ -41,11 +60,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       final cubit = context.read<MessageCubit>();
       _controller = ChatDetailController(
         webSocketService: getIt<WebSocketService>(),
-        messageCubit: cubit, 
+        messageCubit: cubit,
       );
     } catch (_) {
       _controller = ChatDetailController(
-        messageCubit: context.read<MessageCubit>(), 
+        messageCubit: context.read<MessageCubit>(),
       );
     }
     _initialize();
@@ -54,7 +73,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Future<void> _initialize() async {
     await _controller.init();
     if (!mounted) return;
-    setState(() {});
+    context.read<DashboardCubit>().triggerRebuild();
   }
 
   @override
@@ -64,26 +83,20 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _onNavTap(int index) {
-    setState(() {
-      _selectedIndex = index;
-      if (index != 0) {
-        _controller.clearSelectedChat();
-      }
-    });
+    context.read<DashboardCubit>().setIndex(index);
+    if (index != 0) {
+      _controller.clearSelectedChat();
+    }
   }
 
   Future<void> _openSettings() async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingPage()));
-    setState(() {});
+    if (!mounted) return;
+    context.read<DashboardCubit>().triggerRebuild();
   }
 
   Future<void> _onChatSelected(ChatRoomModel chat) async {
-    // BUG #1 FIX: selectChat only stores the selection locally — no HTTP call.
-    // openRoom (the actual API call) is called exactly once inside
-    // ChatDetailView._initializeChat (via initState on mobile, or
-    // didUpdateWidget on desktop).
     _controller.selectChat(chat);
-
     if (!mounted) return;
     final isMobile = MediaQuery.of(context).size.width < 600;
     if (isMobile) {
@@ -98,7 +111,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         ),
       );
     } else {
-      setState(() {});
+      context.read<DashboardCubit>().triggerRebuild();
     }
   }
 
@@ -111,15 +124,19 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       builder: (_, __, ___) {
         final isDark = ThemeController.isDark;
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 600;
+        return BlocBuilder<DashboardCubit, DashboardState>(
+          builder: (context, dashboardState) {
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final isDesktop = constraints.maxWidth >= 600;
 
-            return Scaffold(
-              backgroundColor: isDark ? _kDarkBg : const Color(0xFFF2F2F7),
-              appBar: isDesktop ? null : _buildMobileAppBar(isDark, profileProv),
-              body: isDesktop ? _buildDesktopLayout(isDark) : _buildMobileBody(isDark),
-              bottomNavigationBar: isDesktop ? null : _buildMobileBottomNavigation(isDark),
+                return Scaffold(
+                  backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF2F2F7),
+                  appBar: isDesktop ? null : _buildMobileAppBar(isDark, profileProv),
+                  body: isDesktop ? _buildDesktopLayout(isDark, dashboardState.selectedIndex) : _buildMobileBody(isDark, dashboardState.selectedIndex),
+                  bottomNavigationBar: isDesktop ? null : _buildMobileBottomNavigation(isDark, dashboardState.selectedIndex),
+                );
+              },
             );
           },
         );
@@ -127,17 +144,17 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  Widget _buildDesktopLayout(bool isDark) {
+  Widget _buildDesktopLayout(bool isDark, int selectedIndex) {
     return Row(
       children: [
         ChatNavigationRail(
           isDark: isDark,
-          selectedIndex: _selectedIndex,
+          selectedIndex: selectedIndex,
           onDestinationSelected: _onNavTap,
           onSettingsTap: _openSettings,
         ),
         Expanded(
-          child: _selectedIndex == 0
+          child: selectedIndex == 0
               ? Row(
                   children: [
                     Expanded(
@@ -151,8 +168,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     ),
                     Expanded(
                       flex: 5,
-                      // BUG #1 FIX: only check selectedChat — selectedRoomId is set
-                      // asynchronously inside ChatDetailView._initializeChat.
                       child: _controller.selectedChat != null
                           ? ChatDetailView(
                               isDark: isDark,
@@ -169,8 +184,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     );
   }
 
-  Widget _buildMobileBody(bool isDark) {
-    if (_selectedIndex == 1) return _CallsView(isDark: isDark);
+  Widget _buildMobileBody(bool isDark, int selectedIndex) {
+    if (selectedIndex == 1) return _CallsView(isDark: isDark);
     return ChatListView(
       isDark: isDark,
       chats: _controller.chats,
@@ -180,9 +195,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   PreferredSizeWidget _buildMobileAppBar(bool isDark, ProfileProvider profileProv) {
-    final appBarBg = isDark ? _kDarkSurface : Colors.white;
+    final appBarBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final titleColor = isDark ? Colors.white : const Color(0xFF1B1B1B);
-    
+
     final avatarUrl = profileProv.avatar;
     final username = profileProv.username ?? "";
     final initial = username.isNotEmpty ? username[0].toUpperCase() : "?";
@@ -196,30 +211,30 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
         child: GestureDetector(
           onTap: _openSettings,
           child: CircleAvatar(
-            backgroundColor: isDark ? _kDarkCard : const Color(0xFFE8EDF5),
+            backgroundColor: isDark ? const Color(0xFF262626) : const Color(0xFFE8EDF5),
             backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
             child: (avatarUrl == null || avatarUrl.isEmpty)
-                ? Text(initial, style: TextStyle(color: isDark ? Colors.white54 : _kBlue, fontWeight: FontWeight.bold))
+                ? Text(initial, style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF2C6BED), fontWeight: FontWeight.bold))
                 : null,
           ),
         ),
       ),
       title: Text('Chatup', style: TextStyle(fontWeight: FontWeight.w800, color: titleColor, fontSize: 20)),
       actions: [
-        IconButton(onPressed: () {}, icon: const Icon(CupertinoIcons.camera, color: _kBlue, size: 22)),
-        IconButton(onPressed: () {}, icon: const Icon(CupertinoIcons.pencil, color: _kBlue, size: 20)),
+        IconButton(onPressed: () {}, icon: const Icon(CupertinoIcons.camera, color: Color(0xFF2C6BED), size: 22)),
+        IconButton(onPressed: () {}, icon: const Icon(CupertinoIcons.pencil, color: Color(0xFF2C6BED), size: 20)),
       ],
     );
   }
 
-  Widget _buildMobileBottomNavigation(bool isDark) {
-    final navBg = isDark ? _kDarkSurface : Colors.white;
-    
+  Widget _buildMobileBottomNavigation(bool isDark, int selectedIndex) {
+    final navBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+
     return BottomNavigationBar(
       backgroundColor: navBg,
-      currentIndex: _selectedIndex,
+      currentIndex: selectedIndex,
       onTap: _onNavTap,
-      selectedItemColor: _kBlue,
+      selectedItemColor: const Color(0xFF2C6BED),
       unselectedItemColor: isDark ? Colors.white38 : Colors.grey,
       type: BottomNavigationBarType.fixed,
       items: const [
@@ -246,7 +261,7 @@ class _CallsView extends StatelessWidget {
     final subColor = isDark ? Colors.white38 : Colors.grey;
 
     return Container(
-      color: isDark ? _kDarkBg : const Color(0xFFF2F2F7),
+      color: isDark ? const Color(0xFF121212) : const Color(0xFFF2F2F7),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
