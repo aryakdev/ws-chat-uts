@@ -38,9 +38,19 @@ func HttpMiddleware(c *fiber.Ctx) error {
 		return c.Status(401).JSON(fiber.Map{"message": "token not valid"})
 	}
 
-	claims := token.Claims.(jwt.MapClaims)
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{
+			"message": "invalid claims",
+		})
+	}
 
-	userID := claims["user_id"].(string)
+	userID, ok := claims["user_id"].(string)
+	if !ok {
+		return c.Status(401).JSON(fiber.Map{
+			"message": "invalid user_id claim",
+		})
+	}
 
 	c.Locals("user_id", userID)
 	return c.Next()

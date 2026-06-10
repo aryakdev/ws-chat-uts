@@ -7,7 +7,7 @@ import (
 )
 
 func WsHandler(c *websocket.Conn) {
-	log.Println("🔥 Koneksi WebSocket baru berhasil terhubung!")
+	log.Println("Koneksi WebSocket baru berhasil terhubung!")
 
 	// Looping untuk mendengarkan pesan dari Flutter
 	for {

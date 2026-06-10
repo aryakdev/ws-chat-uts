@@ -119,7 +119,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 18),
 
-                      Text('Link',
+                      Text('ChatUp',
                           style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w800,

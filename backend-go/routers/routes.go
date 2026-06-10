@@ -8,7 +8,7 @@ import (
 )
 
 func SetupRoutes(app *fiber.App) {
-	// --- GRUP API ---
+
 	api := app.Group("/api")
 
 	auth := api.Group("/auth")
@@ -17,22 +17,22 @@ func SetupRoutes(app *fiber.App) {
 	chat := api.Group("/chat", middleware.HttpMiddleware)
 	messages := api.Group("/messages", middleware.HttpMiddleware)
 
-	// Auth
 	auth.Post("/register", handlers.Register)
 	auth.Post("/login", handlers.Login)
 	auth.Post("/refresh", handlers.RefreshToken)
 
-	// Profile (Milik User Sendiri)
-	profile.Get("/me", handlers.GetMyProfile)
+	profile.Get(
+		"/me",
+		middleware.ProfileCache(),
+		handlers.GetMyProfile,
+	)
 	profile.Patch("/me", handlers.UpdateMyProfile)
 	profile.Patch("/update/:id", handlers.UpdateProfileByID)
 	profile.Patch("/avatar", handlers.UpdateAvatar)
 
-	// Users (Admin/General)
 	user.Get("/", handlers.GetUsers)
 	user.Get("/:id", handlers.GetUserByID)
 
-	//ChatRoom (Private)
 	chat.Post("/private", handlers.CreateOrGetPrivateRoom)
 
 	messages.Get("/", handlers.GetMessages)
