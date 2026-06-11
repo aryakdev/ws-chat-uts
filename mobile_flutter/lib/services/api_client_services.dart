@@ -22,7 +22,6 @@ class ApiClient {
       receiveTimeout: const Duration(seconds: 15),
       headers: {
         'accept': 'application/json',
-        'Content-Type': 'application/json',
       },
     ));
 
@@ -38,6 +37,9 @@ class ApiClient {
   Future<void> init() async {
     accessToken = await storageGetString(_accessTokenKey);
     refreshToken = await storageGetString(_refreshTokenKey);
+    if (accessToken != null && accessToken!.isNotEmpty) {
+      dio.options.headers['Authorization'] = 'Bearer $accessToken';
+    }
   }
 
   Future<void> saveTokens({
@@ -48,6 +50,7 @@ class ApiClient {
     this.refreshToken = refreshToken;
     await storageSetString(_accessTokenKey, accessToken);
     await storageSetString(_refreshTokenKey, refreshToken);
+    dio.options.headers['Authorization'] = 'Bearer $accessToken';
   }
 
   Future<void> clearTokens() async {
