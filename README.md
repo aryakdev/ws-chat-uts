@@ -1,114 +1,181 @@
 # ws-chat-uts
 
-Aplikasi **real-time chat** berbasis **WebSocket** dengan arsitektur terpisah antara backend dan frontend. Proyek ini saat ini masih dalam tahap **development**, sehingga fitur chat end-to-end dapat terus berkembang seiring iterasi.
+`ws-chat-uts` adalah aplikasi chat real-time berbasis **Go Fiber**, **WebSocket**, **PostgreSQL**, dan **Flutter**. Repository ini berisi dua bagian utama:
 
-## 1 Deskripsi Project
+- **`backend-go/`**: REST API, autentikasi JWT, WebSocket chat room, upload avatar Cloudinary, dan migrasi database otomatis dengan GORM.
+- **`mobile_flutter/`**: client Flutter untuk login/register, daftar user, ruang chat privat, realtime messaging, profil, dan dark mode.
 
-`ws-chat-uts` adalah proyek aplikasi chat yang dirancang untuk komunikasi real-time.
-
-- **Backend (Golang)** menangani API, autentikasi, dan orkestrasi layanan.
-- **Frontend (Flutter)** menjadi client mobile untuk interaksi pengguna.
-- **PostgreSQL** digunakan sebagai penyimpanan data utama.
-- **Redis** disiapkan untuk kebutuhan caching/pub-sub realtime.
-- Seluruh service backend dijalankan melalui **Docker Compose**.
-
-> Status saat ini: development (pengembangan aktif).
+> Status project: masih dalam tahap development/UTS, sehingga beberapa konfigurasi masih bersifat lokal atau hardcoded sesuai kode saat ini.
 
 ---
 
-## 2) Tech Stack
+## Tech Stack
 
-- **Golang** (backend API/service)
-- **Flutter** (aplikasi mobile)
-- **PostgreSQL** (database utama)
-- **Redis** (cache & messaging pendukung realtime)
-- **Docker & Docker Compose** (container orchestration lokal)
+### Backend
+
+- Go `1.25`
+- Fiber `v2`
+- Fiber WebSocket
+- GORM + PostgreSQL
+- JWT (`github.com/golang-jwt/jwt/v5`)
+- Cloudinary untuk upload avatar
+- Swagger UI (`swaggo/fiber-swagger`)
+- Docker & Docker Compose
+
+### Mobile
+
+- Flutter SDK dengan Dart `>=3.11.0 <4.0.0`
+- Dio untuk HTTP client
+- `web_socket_channel` untuk koneksi WebSocket
+- Provider + Flutter Bloc
+- Shared Preferences / storage conditional web-IO
+- Google Fonts, Lottie, Image Picker
 
 ---
 
-## 3) Struktur Folder
-
-Berikut struktur utama project:
+## Struktur Project
 
 ```text
 ws-chat-uts/
 ├── backend-go/
+│   ├── config/          # Konfigurasi environment, database, Cloudinary
+│   ├── docs/            # File Swagger hasil generate
+│   ├── handlers/        # Handler REST API dan WebSocket
+│   ├── middleware/      # Middleware JWT HTTP, JWT WebSocket, cache header
+│   ├── model/           # Model GORM dan DTO request/response
+│   ├── repository/      # Query database / data access layer
+│   ├── routers/         # Registrasi route REST dan WebSocket
+│   ├── Dockerfile
+│   ├── go.mod
+│   └── main.go
 ├── mobile_flutter/
-├── database/
+│   ├── lib/
+│   │   ├── controllers/     # Controller login, register, chat, message
+│   │   ├── domain/          # Abstraksi repository Flutter
+│   │   ├── model/           # Model data Flutter
+│   │   ├── presentation/    # Halaman dan widget UI
+│   │   ├── services/        # API client, WebSocket, profile, message service
+│   │   ├── theme/           # Light/dark theme
+│   │   ├── injection.dart   # Dependency injection get_it
+│   │   └── main.dart
+│   ├── test/
+│   └── pubspec.yaml
 ├── docker-compose.yml
-├── .env.example
 └── README.md
 ```
 
-### Penjelasan singkat tiap folder
+---
 
-- **`backend-go/`**  
-  Berisi source code backend Golang (konfigurasi, handler, middleware, model, routing, dokumentasi Swagger, dan entry point aplikasi).
+## Konfigurasi Environment Backend
 
-- **`mobile_flutter/`** *(catatan: ini folder frontend yang ada di repository saat ini)*  
-  Berisi source code aplikasi Flutter (UI, state, model, dan konfigurasi multiplatform Android/iOS/Web/Desktop).
+Backend membaca environment dari file `.env` saat dijalankan lokal, atau dari environment container saat dijalankan via Docker Compose.
 
-- **`database/`**  
-  Berisi kebutuhan inisialisasi database (contoh: skrip SQL awal).
+Buat file `.env` di root repository:
 
-- **`docker-compose.yml`**  
-  Definisi service container (backend, PostgreSQL, Redis) dan networking antar-service.
+```env
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=chat_db
+DB_HOST=db
+DB_PORT=5432
+APP_PORT=8080
+JWT_ACCESS_SECRET=change-me-access-secret
+JWT_REFRESH_SECRET=change-me-refresh-secret
+CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>
+```
 
-- **`.env.example`**  
-  Contoh variabel environment minimum untuk koneksi database.
+Catatan:
 
-> Jika Anda menggunakan istilah `flutter_mobile`, pada repository ini padanannya adalah folder **`mobile_flutter/`**.
+- Saat backend dijalankan dengan `docker compose`, `DB_HOST` otomatis diarahkan ke service `db` dan `DB_PORT` ke `5432` oleh `docker-compose.yml`.
+- `CLOUDINARY_URL` wajib ada karena backend memanggil inisialisasi Cloudinary saat startup.
+- Token access dibuat saat login dan dipakai untuk endpoint yang dilindungi serta koneksi WebSocket.
 
 ---
 
-## 4) Cara Menjalankan Project
+## Menjalankan Backend dengan Docker Compose
 
-### Prasyarat
+Prasyarat:
 
-Pastikan sudah terpasang:
+- Docker
+- Docker Compose
+- File `.env` di root repository
 
-- Docker + Docker Compose
-- Flutter SDK
-- Git
-
-### Langkah-langkah
-
-1. **Clone repository**
-
-```bash
-git clone <url-repository-anda>
-cd ws-chat-uts
-```
-
-2. **Siapkan environment file**
-
-```bash
-cp .env.example .env
-```
-
-Lalu isi nilai variabel pada `.env` sesuai kebutuhan.
-
-3. **Jalankan service backend + database + redis**
+Jalankan:
 
 ```bash
 docker compose up --build
 ```
 
-4. **Pastikan semua service berjalan**
+Service yang dibuat oleh Compose saat ini:
 
-- `chat-backend` (backend)
-- `chat-db` (PostgreSQL)
-- `chat-redis` (Redis)
+| Service | Container | Port host | Keterangan |
+| --- | --- | --- | --- |
+| `db` | `chat-db` | `5432` | PostgreSQL 16 Alpine |
+| `backend` | `chat-backend` | `8080` | Backend Go Fiber |
 
-Cek status service:
+Cek status container:
 
 ```bash
 docker compose ps
 ```
 
-5. **Jalankan frontend Flutter (terpisah dari Docker Compose)**
+Backend akan tersedia di:
 
-Buka terminal baru, lalu:
+```text
+http://localhost:8080
+```
+
+Root path `/` akan redirect ke Swagger UI:
+
+```text
+http://localhost:8080/swagger/index.html
+```
+
+---
+
+## Menjalankan Backend secara Lokal tanpa Docker
+
+Jika PostgreSQL sudah berjalan secara lokal, sesuaikan `.env` seperti contoh berikut:
+
+```env
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=chat_db
+DB_HOST=localhost
+DB_PORT=5432
+APP_PORT=8080
+JWT_ACCESS_SECRET=change-me-access-secret
+JWT_REFRESH_SECRET=change-me-refresh-secret
+CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>
+```
+
+Kemudian jalankan:
+
+```bash
+cd backend-go
+go mod download
+go run .
+```
+
+Saat startup, backend akan menjalankan `AutoMigrate` untuk tabel:
+
+- `users`
+- `profiles`
+- `chat_rooms`
+- `chat_members`
+- `messages`
+- `message_reads`
+
+---
+
+## Menjalankan Aplikasi Flutter
+
+Prasyarat:
+
+- Flutter SDK yang kompatibel dengan Dart `>=3.11.0 <4.0.0`
+- Emulator/device/browser target Flutter
+
+Jalankan:
 
 ```bash
 cd mobile_flutter
@@ -116,359 +183,237 @@ flutter pub get
 flutter run
 ```
 
----
+Catatan penting:
 
-## 5) Environment
-
-Project menggunakan environment variables untuk konfigurasi koneksi.
-
-### Minimal variabel (berdasarkan `.env.example`)
-
-```env
-DB_USER=<username_db>
-DB_PASSWORD=<password_db>
-DB_NAME=<nama_db>
-```
-
-### Variabel yang juga digunakan service backend
-
-```env
-DB_HOST=db
-DB_PORT=5432
-APP_PORT=8080
-REDIS_HOST=redis
-REDIS_PORT=6379
-JWT_SECRET=<secret_token>
-```
-
-> `DB_HOST=db` dan `REDIS_HOST=redis` mengikuti nama service pada Docker Compose internal network.
+- Base URL API mobile saat ini masih hardcoded di `mobile_flutter/lib/services/api_client_services.dart` menjadi `http://13.212.39.206:8080`.
+- Untuk memakai backend lokal, ubah nilai `baseUrl` tersebut ke `http://localhost:8080` untuk web/desktop, atau alamat host yang dapat diakses emulator/device.
+- WebSocket Flutter otomatis mengubah `http://` menjadi `ws://` dan `https://` menjadi `wss://` dari base URL yang sama.
 
 ---
 
-## 6) API / WebSocket Info
+## Fitur Backend Saat Ini
 
-### API utama (saat ini)
+- Register user dengan email, username, dan password minimal 8 karakter.
+- Login user dan penerbitan access token + refresh token.
+- Refresh token melalui cookie `refresh_token`.
+- Middleware JWT untuk endpoint HTTP protected.
+- Middleware JWT untuk WebSocket melalui header `Authorization: Bearer <token>` atau query `?token=<token>`.
+- Profile user: lihat profil, update profil, update profil berdasarkan user ID, dan upload avatar ke Cloudinary.
+- User listing selain user yang sedang login.
+- Membuat atau mengambil private chat room.
+- Mengambil semua message atau message berdasarkan room.
+- WebSocket room dengan action `join`, `leave`, dan `message`.
+- Broadcast message ke semua koneksi yang terdaftar pada room yang sama.
 
-Base path backend:
+---
+
+## Fitur Flutter Saat Ini
+
+- Splash screen dan routing awal berdasarkan token tersimpan.
+- Login dan register.
+- Penyimpanan token access/refresh di storage lokal.
+- Daftar user untuk memulai chat privat.
+- Membuat/mengambil room chat privat lewat REST API.
+- Mengambil riwayat message berdasarkan room.
+- Koneksi WebSocket untuk join room, leave room, dan kirim message realtime.
+- Halaman settings untuk melihat/mengubah profil.
+- Toggle dark mode.
+- Dependency injection dengan `get_it` untuk service dan repository.
+
+---
+
+## REST API Endpoints
+
+Base URL lokal backend:
+
+```text
+http://localhost:8080
+```
+
+Base path REST API:
 
 ```text
 /api
 ```
 
-Endpoint yang sudah tersedia antara lain:
+Endpoint dengan tanda **Protected** wajib menyertakan header:
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/profile/me` (memerlukan JWT)
-- `PATCH /api/profile/me` (memerlukan JWT)
-
-Dokumentasi Swagger:
-
-- `GET /swagger/index.html`
-
-### WebSocket
-
-- Endpoint WebSocket umum untuk chat biasanya berada pada path seperti:
-
-```text
-/ws
+```http
+Authorization: Bearer <access_token>
 ```
 
-- Pada versi saat ini, route WebSocket chat belum diekspos di routing utama backend (masih tahap pengembangan).
+### Root dan Swagger
 
-Contoh koneksi WebSocket (saat endpoint tersedia):
+| Method | Path | Auth | Keterangan |
+| --- | --- | --- | --- |
+| `GET` | `/` | Tidak | Redirect ke `/swagger/index.html` |
+| `GET` | `/swagger/*` | Tidak | Swagger UI |
+
+### Auth
+
+| Method | Path | Auth | Body | Keterangan |
+| --- | --- | --- | --- | --- |
+| `POST` | `/api/auth/register` | Tidak | `{ "username": "arya", "email": "arya@example.com", "password": "password123" }` | Membuat user dan profile |
+| `POST` | `/api/auth/login` | Tidak | `{ "email": "arya@example.com", "password": "password123" }` | Menghasilkan `access_token`, `refresh_token`, `session_id`, dan `user_id` |
+| `POST` | `/api/auth/refresh` | Cookie refresh | Tidak wajib | Menghasilkan access token baru dari cookie `refresh_token` |
+
+### Profile
+
+| Method | Path | Auth | Body | Keterangan |
+| --- | --- | --- | --- | --- |
+| `GET` | `/api/profile/me` | Protected | - | Mengambil profil user login |
+| `PATCH` | `/api/profile/me` | Protected | `{ "username": "arya", "bio": "hello", "avatar": "https://..." }` | Update profil user login |
+| `PATCH` | `/api/profile/update/:id` | Protected | `{ "username": "arya", "bio": "hello", "avatar": "https://..." }` | Update profil berdasarkan user UUID |
+| `PATCH` | `/api/profile/avatar` | Protected | Multipart form field `avatar` | Upload avatar `.jpg`, `.jpeg`, atau `.png` ke Cloudinary |
+
+### Users
+
+| Method | Path | Auth | Keterangan |
+| --- | --- | --- | --- |
+| `GET` | `/api/users/` | Protected | Mengambil daftar user selain user login |
+| `GET` | `/api/users/:id` | Protected | Mengambil detail user berdasarkan UUID |
+
+### Chat Room
+
+| Method | Path | Auth | Body | Keterangan |
+| --- | --- | --- | --- | --- |
+| `POST` | `/api/chat/private` | Protected | `{ "target_user_id": "<uuid>" }` | Mengambil room privat yang sudah ada atau membuat room baru |
+
+### Messages
+
+| Method | Path | Auth | Keterangan |
+| --- | --- | --- | --- |
+| `GET` | `/api/messages/` | Protected | Mengambil semua message |
+| `GET` | `/api/messages/:room_id` | Protected | Mengambil message berdasarkan room UUID |
+
+---
+
+## WebSocket
+
+Endpoint WebSocket:
 
 ```text
 ws://localhost:8080/ws
 ```
 
+Autentikasi dapat memakai salah satu cara berikut:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+atau query parameter:
+
+```text
+ws://localhost:8080/ws?token=<access_token>
+```
+
+### Event Client ke Server
+
+Join room:
+
+```json
+{
+  "action": "join",
+  "room_id": "<room_uuid>"
+}
+```
+
+Leave room:
+
+```json
+{
+  "action": "leave",
+  "room_id": "<room_uuid>"
+}
+```
+
+Kirim message:
+
+```json
+{
+  "action": "message",
+  "room_id": "<room_uuid>",
+  "content": "Halo!",
+  "type": "text"
+}
+```
+
+### Event Server ke Client
+
+Saat message berhasil disimpan, server broadcast payload seperti berikut ke room terkait:
+
+```json
+{
+  "id": "<message_uuid>",
+  "room_id": "<room_uuid>",
+  "sender_id": "<user_uuid>",
+  "content": "Halo!",
+  "type": "text",
+  "created_at": "2026-06-12T00:00:00Z"
+}
+```
+
+Catatan: client harus melakukan `join` ke room sebelum mengirim `message`; jika belum join, message ditolak oleh handler WebSocket.
+
 ---
 
-## 7) Catatan Tambahan
+## Contoh Alur Penggunaan API
 
-- Pastikan Docker daemon aktif sebelum menjalankan `docker compose up --build`.
-- Pastikan Flutter SDK siap (`flutter doctor` tidak ada error kritis).
-- Jika port bentrok, sesuaikan mapping port pada `docker-compose.yml`.
-- Untuk development, jalankan backend via Docker Compose dan frontend secara lokal agar iterasi UI lebih cepat.
+1. Register user A dan user B melalui `/api/auth/register`.
+2. Login user A melalui `/api/auth/login` dan simpan `access_token`.
+3. Ambil daftar user melalui `/api/users/` untuk mendapatkan target user.
+4. Buat atau ambil room privat melalui `/api/chat/private` dengan `target_user_id`.
+5. Buka koneksi WebSocket ke `/ws` menggunakan access token.
+6. Kirim event `join` dengan `room_id`.
+7. Kirim event `message` untuk chat realtime.
+8. Ambil riwayat message melalui `/api/messages/:room_id` jika diperlukan.
+
+---
+
+## Testing dan Quality Check
+
+Backend:
+
+```bash
+cd backend-go
+go test ./...
+```
+
+Flutter:
+
+```bash
+cd mobile_flutter
+flutter test
+```
+
+Analisis Flutter:
+
+```bash
+cd mobile_flutter
+flutter analyze
+```
+
+---
+
+## Database Diagram
+
+Diagram database tersedia di draw.io:
+
+- [Open Database Diagram](https://app.diagrams.net/?src=about#G1IQlvp4MQX225xthIo7t2NS_L4aQSXnYF#%7B%22pageId%22%3A%22kfpf0aNp-GbPhx4jT6oY%22%7D)
+
+---
+
+## Catatan Development
+
+- `docker-compose.yml` saat ini hanya menjalankan PostgreSQL dan backend; Redis tidak digunakan pada kode/compose saat ini.
+- Backend memakai GORM AutoMigrate, jadi tidak ada folder migration SQL khusus pada repository saat ini.
+- Refresh token disimpan sebagai HTTP-only cookie saat login, sedangkan Flutter juga menyimpan `refresh_token` dari response JSON.
+- Endpoint refresh saat ini menandatangani access token baru dengan secret refresh token sesuai implementasi kode saat ini.
+- Beberapa nama file masih mengikuti kondisi project saat ini, misalnya `profle_handler.go`.
 
 ---
 
 ## Lisensi
 
-Tambahkan informasi lisensi sesuai kebijakan project (mis. MIT, Apache-2.0, atau private internal).
-
-## 8) Database Diagram
-
-The current database relationship diagram is available at:
-
-- [Open Database Diagram (draw.io)](https://app.diagrams.net/?src=about#G1IQlvp4MQX225xthIo7t2NS_L4aQSXnYF#%7B%22pageId%22%3A%22kfpf0aNp-GbPhx4jT6oY%22%7D)
-
----
-
-## 9) API Endpoints
-
-This section documents all currently registered HTTP and WebSocket routes in the backend service.
-
-### Health / Root
-
-#### GET /
-
-- **Description:** Redirects to Swagger UI.
-- **Request body:** Not required.
-- **Response example:** HTTP 302 redirect to `/swagger/index.html`.
-
-### Swagger
-
-#### GET /swagger/*
-
-- **Description:** Serves Swagger API documentation UI.
-- **Request body:** Not required.
-- **Response example:** Swagger HTML page.
-
-### WebSocket
-
-#### GET /ws
-
-- **Description:** Upgrades HTTP connection to WebSocket and starts chat echo handler.
-- **Request body:** Not required (WebSocket handshake).
-- **Response example:**
-
-```json
-{
-  "event": "message",
-  "payload": "Server menerima pesanmu: <your_message>"
-}
-```
-
-> Note: Accessing `/ws` without a valid WebSocket upgrade returns `426 Upgrade Required`.
-
-### Auth
-
-#### POST /api/auth/register
-
-- **Description:** Registers a new user account and creates a linked profile record.
-- **Request:**
-
-```json
-{
-  "username": "john_doe",
-  "email": "john@example.com",
-  "password": "password123"
-}
-```
-
-- **Response example (201):**
-
-```json
-{
-  "message": "Register berhasil",
-  "user_id": "6e2ad4ec-7a14-452d-a6f8-5f8ab5a2f89d"
-}
-```
-
-#### POST /api/auth/login
-
-- **Description:** Authenticates a user and returns a JWT token (also set in HTTP-only cookie `token`).
-- **Request:**
-
-```json
-{
-  "email": "john@example.com",
-  "password": "password123"
-}
-```
-
-- **Response example (200):**
-
-```json
-{
-  "message": "Login berhasil",
-  "token": "jwt_token_here",
-  "user_id": "6e2ad4ec-7a14-452d-a6f8-5f8ab5a2f89d"
-}
-```
-
-### Profile
-
-#### GET /api/profile/me
-
-- **Description:** Returns the authenticated user's profile.
-- **Authentication:** Bearer token required.
-- **Request body:** Not required.
-- **Response example (200):**
-
-```json
-{
-  "username": "john_doe",
-  "bio": "Backend engineer",
-  "avatar": "https://example.com/avatar.jpg"
-}
-```
-
-#### PATCH /api/profile/me
-
-- **Description:** Updates the authenticated user's profile fields.
-- **Authentication:** Bearer token required.
-- **Request:**
-
-```json
-{
-  "username": "john_doe_updated",
-  "bio": "Building realtime apps",
-  "avatar": "https://example.com/new-avatar.jpg"
-}
-```
-
-- **Response example (200):**
-
-```json
-{
-  "message": "profile updated",
-  "data": {
-    "id": "1e2ad4ec-7a14-452d-a6f8-5f8ab5a2f89d",
-    "user_id": "6e2ad4ec-7a14-452d-a6f8-5f8ab5a2f89d",
-    "username": "john_doe_updated",
-    "bio": "Building realtime apps",
-    "avatar": "https://example.com/new-avatar.jpg"
-  }
-}
-```
-
-#### PATCH /patch/update/:id
-
-- **Description:** Updates (or initializes) profile data by user ID for integration compatibility with mobile client.
-- **Request:**
-
-```json
-{
-  "username": "john_doe_updated",
-  "bio": "Cross-platform user",
-  "avatar": "https://example.com/avatar.jpg"
-}
-```
-
-- **Response example (200):**
-
-```json
-{
-  "message": "Profile berhasil diperbarui",
-  "data": {
-    "id": "1e2ad4ec-7a14-452d-a6f8-5f8ab5a2f89d",
-    "user_id": "6e2ad4ec-7a14-452d-a6f8-5f8ab5a2f89d",
-    "username": "john_doe_updated",
-    "bio": "Cross-platform user",
-    "avatar": "https://example.com/avatar.jpg"
-  }
-}
-```
-
-### Users
-
-#### GET /api/users/
-
-- **Description:** Returns list of users (ID and username).
-- **Request body:** Not required.
-- **Response example (200):**
-
-```json
-{
-  "message": "Success",
-  "data": [
-    {
-      "id": "6e2ad4ec-7a14-452d-a6f8-5f8ab5a2f89d",
-      "username": "john_doe"
-    }
-  ]
-}
-```
-
-#### GET /api/users/:id
-
-- **Description:** Returns user detail by UUID.
-- **Request body:** Not required.
-- **Response example (200):**
-
-```json
-{
-  "message": "Success",
-  "data": {
-    "id": "6e2ad4ec-7a14-452d-a6f8-5f8ab5a2f89d",
-    "username": "john_doe",
-    "email": "john@example.com",
-    "bio": "Backend engineer",
-    "avatar": "https://example.com/avatar.jpg"
-  }
-}
-```
-
----
-
-## 10) Integration Contract
-
-This section defines backend integration expectations for web, mobile, and other clients.
-
-### CORS Configuration
-
-- The backend accepts cross-origin requests via Fiber CORS middleware.
-- Development origins currently include localhost variants for Flutter Web and API development.
-- For production, use explicit trusted origins instead of wildcard (`*`) to improve security.
-
-### Base URL
-
-- Current API group base path:
-
-```text
-/api
-```
-
-- Endpoint convention example:
-
-```text
-/api/auth/login
-/api/profile/me
-/api/users/
-```
-
-### Response Schema
-
-- All responses are JSON.
-- Key names currently use **snake_case** for multi-word fields (for example: `user_id`, `created_at`) and lowercase key naming for simple fields (`message`, `data`).
-- Typical success and error envelope patterns used in this project:
-
-```json
-{
-  "message": "success",
-  "data": {},
-  "error": null
-}
-```
-
-```json
-{
-  "message": "error message"
-}
-```
-
----
-
-## 11) Repository Standards
-
-### Git Flow
-
-- Use small, descriptive commits for each logical change.
-- Use feature branches for ongoing work (for example: `feature/auth-improvements`, `feature/chat-room`).
-- Open pull requests for review before merging into the main branch.
-
-### .gitignore
-
-Ensure `.gitignore` includes at least:
-
-- `node_modules/`
-- `.env`
-- Build outputs/binaries (for example: `bin/`, compiled artifacts)
-
-### Environment Variables
-
-- Store runtime configuration in `.env`.
-- Keep `.env.example` as the template for required variables.
-- Never commit real secrets or production credentials.
+Belum ada lisensi yang ditentukan di repository ini. Tambahkan file `LICENSE` jika project akan dipublikasikan atau dibagikan secara resmi.
