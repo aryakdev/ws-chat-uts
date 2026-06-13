@@ -1,4 +1,7 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile_flutter/services/storage_io.dart'
     if (dart.library.html) 'package:mobile_flutter/services/storage_web.dart';
 import 'package:mobile_flutter/services/api_client_services.dart';
@@ -72,10 +75,9 @@ class ProfileProvider with ChangeNotifier {
     required String bio,
     required String avatar,
   }) async {
-    if (_userId.isEmpty) return false;
     try {
       final response = await ApiClient().dio.patch(
-        '/api/profile/update/$_userId',
+        '/api/profile/me',
         data: {
           'username': name,
           'bio': bio,
@@ -91,6 +93,54 @@ class ProfileProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint("Update Error: $e");
+    }
+    return false;
+  }
+
+  Future<bool> uploadAvatar(XFile file) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      String fileName = file.name;
+      if (!fileName.contains('.')) {
+        fileName = 'avatar.png'; // default fallback for web/gallery
+      }
+
+      MultipartFile multipartFile;
+      if (kIsWeb) {
+        multipartFile = await MultipartFile.fromBytes(
+          await file.readAsBytes(),
+          filename: fileName,
+        );
+      } else {
+        multipartFile = await MultipartFile.fromFile(
+          file.path,
+          filename: fileName,
+        );
+      }
+
+      FormData formData = FormData.fromMap({
+        "avatar": multipartFile,
+      });
+
+      final response = await ApiClient().dio.patch(
+        '/api/profile/avatar',
+        data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final newAvatar = response.data['avatar'];
+        _avatar = '$newAvatar?v=${DateTime.now().millisecondsSinceEpoch}';
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Upload Avatar Error: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
     return false;
   }

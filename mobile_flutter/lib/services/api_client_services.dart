@@ -33,7 +33,9 @@ class ApiClient {
     ));
   }
 
-  String get baseUrl => 'http://13.212.39.206:8080';
+  String get baseUrl => kIsWeb
+    ? 'http://localhost:8080'
+    : 'http://13.212.39.206:8080';
 
   Future<void> init() async {
     accessToken = await storageGetString(_accessTokenKey);

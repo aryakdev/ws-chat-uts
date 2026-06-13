@@ -7,6 +7,7 @@ import 'package:mobile_flutter/services/storage_io.dart' if (dart.library.html) 
 // import 'package:mobile_flutter/services/api_client_services.dart';
 import 'package:mobile_flutter/controllers/api_client_controllers.dart';
 import 'package:mobile_flutter/injection.dart';
+import 'package:image_picker/image_picker.dart';
 
 const _kBlue = Color(0xFF2C6BED);
 
@@ -32,7 +33,6 @@ class _SettingPageState extends State<SettingPage> {
     final profileProv = context.read<ProfileProvider>();
     final usernameCtrl = TextEditingController(text: profileProv.username);
     final bioCtrl = TextEditingController(text: profileProv.bio);
-    final avatarCtrl = TextEditingController(text: profileProv.avatar);
 
     showDialog(
       context: context,
@@ -43,7 +43,6 @@ class _SettingPageState extends State<SettingPage> {
           children: [
             TextField(controller: usernameCtrl, decoration: const InputDecoration(labelText: 'Username')),
             TextField(controller: bioCtrl, decoration: const InputDecoration(labelText: 'Bio')),
-            TextField(controller: avatarCtrl, decoration: const InputDecoration(labelText: 'URL Avatar')),
           ],
         ),
         actions: [
@@ -53,7 +52,7 @@ class _SettingPageState extends State<SettingPage> {
               final success = await profileProv.updateProfile(
                 name: usernameCtrl.text,
                 bio: bioCtrl.text,
-                avatar: avatarCtrl.text,
+                avatar: profileProv.avatar ?? '',
               );
               if (!context.mounted) return;
 
@@ -64,6 +63,16 @@ class _SettingPageState extends State<SettingPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    
+    if (image != null && mounted) {
+      final profileProv = context.read<ProfileProvider>();
+      await profileProv.uploadAvatar(image);
+    }
   }
 
   @override
@@ -106,11 +115,30 @@ class _SettingPageState extends State<SettingPage> {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 32,
-                  backgroundColor: _kBlue,
-                  backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
-                  child: (avatarUrl == null || avatarUrl.isEmpty) ? Text(initial, style: const TextStyle(fontSize: 24, color: Colors.white)) : null,
+                GestureDetector(
+                  onTap: _pickAndUploadAvatar,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 32,
+                        backgroundColor: _kBlue,
+                        backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty) ? NetworkImage(avatarUrl) : null,
+                        child: (avatarUrl == null || avatarUrl.isEmpty) ? Text(initial, style: const TextStyle(fontSize: 24, color: Colors.white)) : null,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.camera_alt, size: 16, color: _kBlue),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
