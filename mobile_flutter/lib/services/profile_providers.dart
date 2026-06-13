@@ -72,25 +72,6 @@ class ProfileProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> uploadAvatar(XFile avatarFile) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      final avatarUrl = await ProfileService(
-        ApiClient(),
-      ).uploadProfilePicture(avatarFile);
-      _avatar = avatarUrl;
-      await fetchProfile();
-      return true;
-    } catch (e) {
-      debugPrint("Upload Avatar Error: $e");
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
 
   Future<bool> updateProfile({
     required String name,
