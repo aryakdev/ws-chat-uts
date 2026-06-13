@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../services/profile_providers.dart';
 import '../../theme/theme_controller.dart';
@@ -18,7 +19,8 @@ class SettingPage extends StatefulWidget {
 }
 
 class _SettingPageState extends State<SettingPage> {
-  
+  final ImagePicker _imagePicker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
@@ -32,36 +34,157 @@ class _SettingPageState extends State<SettingPage> {
     final profileProv = context.read<ProfileProvider>();
     final usernameCtrl = TextEditingController(text: profileProv.username);
     final bioCtrl = TextEditingController(text: profileProv.bio);
-    final avatarCtrl = TextEditingController(text: profileProv.avatar);
+    XFile? selectedAvatar;
+    ImageProvider<Object>? selectedAvatarPreview;
+    bool isSaving = false;
+    String? errorMessage;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Profil'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: usernameCtrl, decoration: const InputDecoration(labelText: 'Username')),
-            TextField(controller: bioCtrl, decoration: const InputDecoration(labelText: 'Bio')),
-            TextField(controller: avatarCtrl, decoration: const InputDecoration(labelText: 'URL Avatar')),
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Edit Profil'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: usernameCtrl,
+                  decoration: const InputDecoration(labelText: 'Username'),
+                  enabled: !isSaving,
+                ),
+                TextField(
+                  controller: bioCtrl,
+                  decoration: const InputDecoration(labelText: 'Bio'),
+                  enabled: !isSaving,
+                ),
+                const SizedBox(height: 16),
+                CircleAvatar(
+                  radius: 44,
+                  backgroundColor: _kBlue,
+                  backgroundImage: selectedAvatarPreview ??
+                      ((profileProv.avatar != null && profileProv.avatar!.isNotEmpty)
+                          ? NetworkImage(profileProv.avatar!)
+                          : null),
+                  child: selectedAvatarPreview == null &&
+                          (profileProv.avatar == null || profileProv.avatar!.isEmpty)
+                      ? const Icon(Icons.person, size: 44, color: Colors.white)
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          try {
+                            final image = await _imagePicker.pickImage(
+                              source: ImageSource.gallery,
+                              imageQuality: 85,
+                            );
+
+                            if (image == null || !dialogContext.mounted) return;
+
+                            final imageBytes = await image.readAsBytes();
+                            if (!dialogContext.mounted) return;
+                            setDialogState(() {
+                              selectedAvatar = image;
+                              selectedAvatarPreview = MemoryImage(imageBytes);
+                              errorMessage = null;
+                            });
+                          } catch (e) {
+                            if (!dialogContext.mounted) return;
+                            setDialogState(() {
+                              errorMessage = 'Gagal memilih avatar: $e';
+                            });
+                          }
+                        },
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: const Text('Choose Avatar'),
+                ),
+                if (selectedAvatar != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      selectedAvatar!.name,
+                      style: Theme.of(context).textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                if (isSaving) ...[
+                  const SizedBox(height: 16),
+                  const CircularProgressIndicator(),
+                ],
+                if (errorMessage != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    errorMessage!,
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(dialogContext),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      setDialogState(() {
+                        isSaving = true;
+                        errorMessage = null;
+                      });
+
+                      final success = await profileProv.updateProfile(
+                        name: usernameCtrl.text,
+                        bio: bioCtrl.text,
+                        avatar: profileProv.avatar ?? '',
+                      );
+
+                      if (!dialogContext.mounted) return;
+
+                      if (!success) {
+                        setDialogState(() {
+                          isSaving = false;
+                          errorMessage = 'Gagal menyimpan profil.';
+                        });
+                        return;
+                      }
+
+                      if (selectedAvatar != null) {
+                        final avatarUploaded = await profileProv.uploadAvatar(
+                          selectedAvatar!,
+                        );
+                        if (!dialogContext.mounted) return;
+
+                        if (!avatarUploaded) {
+                          setDialogState(() {
+                            isSaving = false;
+                            errorMessage = 'Gagal mengunggah avatar.';
+                          });
+                          return;
+                        }
+                      } else {
+                        await profileProv.fetchProfile();
+                        if (!dialogContext.mounted) return;
+                      }
+
+                      if (!context.mounted || !dialogContext.mounted) return;
+
+                      Navigator.pop(dialogContext);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Profil berhasil diperbarui.')),
+                      );
+                    },
+              child: const Text('Simpan'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () async {
-              final success = await profileProv.updateProfile(
-                name: usernameCtrl.text,
-                bio: bioCtrl.text,
-                avatar: avatarCtrl.text,
-              );
-              if (!context.mounted) return;
-
-              if (success && mounted) Navigator.pop(context);
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
       ),
     );
   }

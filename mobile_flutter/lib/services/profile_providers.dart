@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile_flutter/services/storage_io.dart'
     if (dart.library.html) 'package:mobile_flutter/services/storage_web.dart';
 import 'package:mobile_flutter/services/api_client_services.dart';
+import 'package:mobile_flutter/services/profile_service.dart';
 
 class ProfileProvider with ChangeNotifier {
   String _email = '';
@@ -61,6 +63,26 @@ class ProfileProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint("Gagal fetch profile: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> uploadAvatar(XFile avatarFile) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final avatarUrl = await ProfileService(
+        ApiClient(),
+      ).uploadProfilePicture(avatarFile);
+      _avatar = avatarUrl;
+      await fetchProfile();
+      return true;
+    } catch (e) {
+      debugPrint("Upload Avatar Error: $e");
+      return false;
     } finally {
       _isLoading = false;
       notifyListeners();
