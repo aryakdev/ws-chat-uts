@@ -11,10 +11,9 @@ class MessageService implements MessageRepository {
     String roomId,
     String token,
   ) async {
-    final response = await ApiClient().dio.get(
+    final response = await apiClient.dio.get(
       '/api/messages/$roomId', 
     );
-   
 
     if (response.statusCode != 200) {
       throw Exception("Failed to load messages");

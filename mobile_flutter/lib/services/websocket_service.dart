@@ -55,17 +55,12 @@ class WebSocketService {
           },
         );
       }
-
-      debugPrint(' WebSocketService($_instanceId) connected successfully');
       
-      // Register listener only once per channel
       _subscription = _channel?.stream.listen(
       (message) {
-        debugPrint("Pesan masuk WS: $message");
+    
         onMessage?.call(message);
       },
-      onError: (error) => debugPrint("Error WS: $error"),
-      onDone: () => debugPrint("Koneksi WS putus."),
     );
     } catch (e) {
       debugPrint(" Gagal WS: $e");

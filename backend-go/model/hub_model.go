@@ -5,19 +5,12 @@ import (
 )
 
 type Subscription struct {
-	RoomID string
 	Conn   *websocket.Conn
+	RoomID string
+	UserID string
 }
 
-type BroadcastReq struct {
-	RoomID  string
-	Message []byte
-}
-
-type Hub struct {
-	register   chan Subscription
-	unregister chan Subscription
-	broadcast  chan BroadcastReq
-
-	rooms map[string]map[*websocket.Conn]bool
+type BroadcastRequest struct {
+	RoomID string
+	Msg    []byte
 }

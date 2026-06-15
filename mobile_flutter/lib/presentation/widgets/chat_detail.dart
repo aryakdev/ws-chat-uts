@@ -225,7 +225,7 @@ class _ChatDetailViewState extends State<ChatDetailView> {
                     child: BlocBuilder<MessageCubit, MessageState>(
                       builder: (context, state) {
                         if (state.isLoading) {
-                          return const Center(
+                            return const Center(
                             child: CircularProgressIndicator(),
                           );
                         }

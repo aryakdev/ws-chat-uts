@@ -1,35 +1,25 @@
 package handlers
 
 import (
+	"backend-go/model"
 	"encoding/json"
 	"log"
 
 	"github.com/gofiber/websocket/v2"
 )
 
-type Subscription struct {
-	Conn   *websocket.Conn
-	RoomID string
-	UserID string
-}
-
-type BroadcastRequest struct {
-	RoomID string
-	Msg    []byte
-}
-
 type Hub struct {
-	register   chan Subscription
-	unregister chan Subscription
-	broadcast  chan BroadcastRequest
+	register   chan model.Subscription
+	unregister chan model.Subscription
+	broadcast  chan model.BroadcastRequest
 	rooms      map[string]map[*websocket.Conn]bool
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		register:   make(chan Subscription),
-		unregister: make(chan Subscription),
-		broadcast:  make(chan BroadcastRequest),
+		register:   make(chan model.Subscription),
+		unregister: make(chan model.Subscription),
+		broadcast:  make(chan model.BroadcastRequest),
 		rooms:      make(map[string]map[*websocket.Conn]bool),
 	}
 }
@@ -82,15 +72,15 @@ func StartDefaultHub() {
 }
 
 func WsRegister(conn *websocket.Conn, roomID string, userID string) {
-	DefaultHub.register <- Subscription{Conn: conn, RoomID: roomID, UserID: userID}
+	DefaultHub.register <- model.Subscription{Conn: conn, RoomID: roomID, UserID: userID}
 }
 
 func Unregister(conn *websocket.Conn, roomID string, userID string) {
-	DefaultHub.unregister <- Subscription{Conn: conn, RoomID: roomID, UserID: userID}
+	DefaultHub.unregister <- model.Subscription{Conn: conn, RoomID: roomID, UserID: userID}
 }
 
 func Broadcast(roomID string, msg []byte) {
-	DefaultHub.broadcast <- BroadcastRequest{RoomID: roomID, Msg: msg}
+	DefaultHub.broadcast <- model.BroadcastRequest{RoomID: roomID, Msg: msg}
 }
 
 func BroadcastJSON(roomID string, v interface{}) error {

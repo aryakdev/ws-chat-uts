@@ -20,18 +20,6 @@ type Message struct {
 	Sender   User      `gorm:"foreignKey:SenderID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
-type MessageRead struct {
-	ID uuid.UUID
-
-	MessageID uuid.UUID
-	Message   Message `gorm:"foreignKey:MessageID"`
-
-	UserID uuid.UUID
-	User   User `gorm:"foreignKey:UserID"`
-
-	ReadAt time.Time
-}
-
 type SendMessageRequest struct {
 	Action  string `json:"action"`
 	RoomID  string `json:"room_id"`

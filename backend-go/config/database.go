@@ -66,7 +66,7 @@ func ConnectDatabase() {
 		&model.ChatRoom{},
 		&model.ChatMember{},
 		&model.Message{},
-		&model.MessageRead{})
+	)
 
 	if err != nil {
 		log.Fatal("Gagal melakukan Auto-Migration: ", err)

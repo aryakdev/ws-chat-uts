@@ -46,7 +46,6 @@ func HandleWebSocket(conn *websocket.Conn) {
 		switch req.Action {
 
 		case "join":
-			// Leave old room first if switching rooms
 			if currentRoomID != "" && currentRoomID != req.RoomID {
 				Unregister(conn, currentRoomID, userID)
 				log.Printf("ws: left room=%s user=%s", currentRoomID, userID)
@@ -63,7 +62,7 @@ func HandleWebSocket(conn *websocket.Conn) {
 			}
 
 		case "message":
-			// Only process messages if user has joined a room
+
 			if currentRoomID == "" {
 				log.Printf("ws: message rejected, user=%s has not joined any room", userID)
 				continue
