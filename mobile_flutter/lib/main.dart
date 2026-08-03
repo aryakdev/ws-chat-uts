@@ -12,6 +12,7 @@ import 'package:mobile_flutter/services/profile_providers.dart';
 import 'package:mobile_flutter/presentation/splash_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'injection.dart';
+import 'injection.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
