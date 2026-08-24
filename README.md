@@ -396,9 +396,9 @@ flutter analyze
 
 ---
 
-## Database Diagram
+## Database Diagrams
 
-Diagram database tersedia di draw.io:
+Diagram database tersedia di draw.io:ss
 
 - [Open Database Diagram](https://app.diagrams.net/?src=about#G1IQlvp4MQX225xthIo7t2NS_L4aQSXnYF#%7B%22pageId%22%3A%22kfpf0aNp-GbPhx4jT6oY%22%7D)
 
@@ -416,4 +416,4 @@ Diagram database tersedia di draw.io:
 
 ## Lisensi
 
-Belum ada lisensi yang ditentukan di repository ini. Tambahkan file `LICENSE` jika project akan dipublikasikan atau dibagikan secara resmi.
+Belum ada lisensi yang ditentukan di repository ini. Tambahkan file `LICENSE` jika project akan dipublikasikan atau dibagikan secara resmsi.
