@@ -89,7 +89,7 @@ Catatan:
 - Saat backend dijalankan dengan `docker compose`, `DB_HOST` otomatis diarahkan ke service `db` dan `DB_PORT` ke `5432` oleh `docker-compose.yml`.
 - `CLOUDINARY_URL` wajib ada karena backend memanggil inisialisasi Cloudinary saat startup.
 - Token access dibuat saat login dan dipakai untuk endpoint yang dilindungi serta koneksi WebSocket.
-
+-hey
 ---
 
 ## Menjalankan Backend dengan Docker Compose
